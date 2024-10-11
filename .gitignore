@@ -18,7 +18,9 @@
 *_GoFitts_*.csv
 
 # Ignore data directories
-/data/
+data/*
+!data/*/
+!data/*/.gitkeep
 
 # Keep the @whisper_venv folder
 !/@whisper_venv/
@@ -32,6 +34,8 @@ __pycache__/
 
 # Ignore log files
 *.log
+*.log.gz
+*.sd3
 
 # Ignore OS generated files
 .DS_Store
