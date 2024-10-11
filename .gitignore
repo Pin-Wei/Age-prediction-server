@@ -1,0 +1,38 @@
+# Ignore CSV files
+*.csv
+
+# Ignore WebM files
+*.webm
+
+# Ignore WAV files
+*.wav
+
+# Ignore JSON files
+*.json
+
+# Ignore specific file patterns
+*_TextReading_*.csv
+*_exclusion_*.csv
+*_OspanTask_*.csv
+*_SpeechComp_*.csv
+*_GoFitts_*.csv
+
+# Ignore data directories
+/data/
+
+# Keep the @whisper_venv folder
+!/@whisper_venv/
+
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+
+# Ignore environment files
+.env
+
+# Ignore log files
+*.log
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
