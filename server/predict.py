@@ -94,7 +94,7 @@ def apply_age_correction(predictions, true_ages, correction_ref):
 def predict():
     try:
         data = request.get_json(force=True)
-        if not data or 'age' not in data or 'id_card' not in data or 'name' not in data or 'test_date' not in data or 'test_time' not in data:
+        if not data or 'age' not in data or 'id_card' not in data or 'name' not in data or 'test_date' not in data:
             return jsonify({"error": "Invalid input data"}), 400
 
         print(data)
@@ -139,8 +139,7 @@ def predict():
             "features": integrated_features,
             "id_card": "",
             "name": "",
-            "test_date": "",
-            "test_time": ""
+            "test_date": ""
         }
         
         default_data.update(data)
@@ -150,7 +149,6 @@ def predict():
         user_id = default_data["id_card"]
         user_name = default_data["name"]
         test_date = default_data["test_date"]
-        test_time = default_data["test_time"]
         
         age_abb = 'y' if age < 40 else 'o'
         age_full = 'young' if age < 40 else 'old'
@@ -222,7 +220,6 @@ def predict():
             "id_card": user_id,
             "name": user_name,
             "testDate": test_date,
-            "testTime": test_time,
             "results": {
                 "brainAge": float_formatter(corrected_age) if age != -1 else "-1",
                 "chronologicalAge": age,
