@@ -159,6 +159,25 @@ def update_json_result(subject_id, result_df):
         json.dump(existing_data, json_file, indent=2)
     logger.info(f"已更新 {subject_id} 的整合結果，保存至 {json_file_path}")
 
+class SubjectReprocessRequest(BaseModel):
+    subject_id: str
+
+def reprocess_subject_data(subject_id: str):
+    logger.info(f"開始重新處理受試者 ID: {subject_id} 的本地數據")
+    
+    for project_name in ALLOWED_PROJECTS:
+        project_path = DATA_DIR / project_name
+        if not project_path.exists():
+            logger.warning(f"專案目錄 {project_path} 不存在，跳過此專案")
+            continue
+
+        # 遍歷專案目錄下的所有 CSV 文件，並進行篩選
+        for filepath in project_path.glob(f"{subject_id}_*.csv"):
+            logger.info(f"找到文件: {filepath.name}，正在處理...")
+            process_file(project_name, filepath)
+    
+    logger.info(f"受試者 ID: {subject_id} 的數據已重新處理完畢")
+
 # API 端點
 @app.get("/")
 def read_root():
@@ -282,6 +301,18 @@ async def get_integrated_result(request: SubjectDownloadRequest, token: str = De
         integrated_result = json.load(json_file)
 
     return {"status": "ok", "integrated_result": integrated_result}
+
+@app.post("/reprocess")
+async def reprocess_subject(request: SubjectReprocessRequest, background_tasks: BackgroundTasks, token: str = Depends(authenticate_gitlab)):
+    subject_id = request.subject_id
+    logger.info(f"開始重新處理受試者 ID: {subject_id} 的數據")
+
+    # 從所有允許的專案中重新處理受試者數據
+    background_tasks.add_task(reprocess_subject_data, subject_id)
+    background_tasks.add_task(process_text_reading, subject_id)
+
+    return {"status": "processing", "message": f"受試者 ID: {subject_id} 的數據正在重新處理"}
+
 
 # === 主程序入口 ===
 
