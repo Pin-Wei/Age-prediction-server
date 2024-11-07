@@ -1,19 +1,25 @@
 
-import os
 import json
-import requests
 import logging
+import os
+from datetime import datetime
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks, Request
-from pydantic import BaseModel
+
 import pandas as pd
-
-from convert import convert_file, parse_with_jar, make_summary
-from online_platform_intergration.integrate_all_tasks import TaskIntegrator, process_and_format_result
-from online_platform_intergration.Textreading_Task.textreading_processor import TextReadingProcessor
+import requests
+from convert import convert_file, make_summary, parse_with_jar
 from dotenv import load_dotenv
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
+from online_platform_intergration.integrate_all_tasks import (
+    TaskIntegrator,
+    process_and_format_result,
+)
+from online_platform_intergration.Textreading_Task.textreading_processor import (
+    TextReadingProcessor,
+)
+from pydantic import BaseModel
 
-load_dotenv() 
+load_dotenv()
 
 # 設置常數和配置
 ENDPOINT = "https://gitlab.pavlovia.org/api/v4/projects/{}/repository/files/data%2F{}/raw?ref=master"
@@ -116,14 +122,14 @@ def process_text_reading(subject_id):
             input_path=DATA_DIR / "TextReading",
             output_path=DATA_DIR / "TextReading"
         )
-        
+
         csv_files = []
         for audio_file in audio_files:
             logger.info(f"處理音頻文件：{audio_file}")
             csv_file = text_reading_processor.generate_csv(audio_file)
             if csv_file:
                 csv_files.append(csv_file)
-        
+
         if csv_files:
             mean_speech_rate = text_reading_processor.calculate_mean_syllable_speech_rate(csv_files)
             if mean_speech_rate is not None:
@@ -147,7 +153,7 @@ def update_json_result(subject_id, result_df):
     else:
         with open(json_file_path, 'r') as json_file:
             existing_data = json.load(json_file)
-    
+
     formatted_result = process_and_format_result(result_df, platform_features)
     for key, value in formatted_result.items():
         if value != -999:
@@ -178,6 +184,49 @@ def reprocess_subject_data(subject_id: str):
     
     logger.info(f"受試者 ID: {subject_id} 的數據已重新處理完畢")
 
+def predict(id_card, test_date):
+    now = datetime.now()
+
+    user_info = None
+    url = f'https://qoca-api.chih-he.dev/user/{id_card}'
+    res = requests.get(url=url)
+    if (res.status_code == 200):
+        user_info = res.json()
+    else:
+        return None
+
+    url = 'http://120.126.102.110:8888/predict'
+    headers = {
+        "X-GitLab-Token": "tcnl-project",
+        "Content-Type": "application/json"
+    }
+    json = {
+        "age": user_info['age'],
+        "id_card": id_card,
+        "name": user_info['name'],
+        "test_date": test_date,
+    }
+    res = requests.post(url=url, json=json, headers=headers)
+    if (res.status_code == 200):
+        logger.info("取得特徵成功")
+        return res.json()
+
+    logger.info("取得特徵失敗")
+    return None
+
+def upload_exam(exam):
+    url = 'https://qoca-api.chih-he.dev/exams'
+    headers = {
+        "Content-Type": "application/json"
+    }
+    res = requests.post(url=url, json=exam, headers=headers)
+    if (res.status_code == 201):
+        logger.info("上傳結果成功")
+        return True
+
+    logger.info(f"上傳結果失敗")
+    return False
+
 # API 端點
 @app.get("/")
 def read_root():
@@ -201,9 +250,16 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
                 background_tasks.add_task(process_text_reading, subject_id)
             else:
                 process_file(project_name, filepath)
-                
+
+            if (project_name in ['ExclusionTask', 'ExclusionTask_JustForDemo']):
+                subject_id = filepath.stem.split('_')[0]
+                test_date = filepath.stem.split('_')[-1]
+                test_date = datetime.strptime(test_date, "%Y-%m-%dT%H%M%S.%fZ").strftime("%Y-%m-%d")
+                predict_result = predict(subject_id, test_date)
+                if predict_result:
+                    upload_exam(predict_result)
             return {"status": "ok", "fetched_file": filename}
-    
+
     raise HTTPException(status_code=404, detail="沒有有效的提交！")
 
 @app.post("/download_all")
