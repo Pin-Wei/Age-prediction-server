@@ -71,6 +71,9 @@ PLATFORM_FEATURES = [
 base_path = os.path.dirname(os.path.abspath(__file__))
 integrator = TaskIntegrator(base_path)
 
+class SubjectDownloadRequest(BaseModel):
+    subject_id: str
+
 def authenticate_gitlab(x_gitlab_token: str = Header(...)):
     if x_gitlab_token != 'tcnl-project':
         raise HTTPException(status_code=403)
