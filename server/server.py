@@ -289,7 +289,7 @@ async def reprocess_subject(request: SubjectReprocessRequest, background_tasks: 
     logger.info(f"開始重新處理受試者 ID: {subject_id} 的數據")
 
     # 從所有允許的專案中重新處理受試者數據
-    background_tasks.add_task(reprocess_subject_data, subject_id)
+    # background_tasks.add_task(reprocess_subject_data, subject_id)
     background_tasks.add_task(process_text_reading, subject_id)
 
     return {"status": "processing", "message": f"受試者 ID: {subject_id} 的數據正在重新處理"}
