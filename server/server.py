@@ -21,6 +21,10 @@ from pydantic import BaseModel
 
 load_dotenv()
 
+class SubjectReprocessRequest(BaseModel):
+    subject_id: str
+    test_date: str  # 新增日期參數，格式如：2024-08-07_11h53.59.456
+
 # 設置常數和配置
 ENDPOINT = "https://gitlab.pavlovia.org/api/v4/projects/{}/repository/files/data%2F{}/raw?ref=master"
 DATA_DIR = Path("../data")
@@ -117,36 +121,58 @@ def process_file(project_name, filepath):
 
     return result_df
 
-def process_text_reading(subject_id):
-    audio_files = list(DATA_DIR.glob(f"TextReading/{subject_id}_*.webm"))
-    if audio_files:
-        logger.info(f"找到 {len(audio_files)} 個音頻文件供 {subject_id} 處理")
-        text_reading_processor = TextReadingProcessor(
-            input_path=DATA_DIR / "TextReading",
-            output_path=DATA_DIR / "TextReading"
-        )
+def process_text_reading(subject_id: str, test_date: str) -> dict:
+    # 構建特定日期的檔案匹配模式
+    pattern = f"TextReading/{subject_id}_TextReading_{test_date}_recording_mic_*.webm"
+    audio_files = list(DATA_DIR.glob(pattern))
+    
+    result = {
+        "status": "error",
+        "message": "",
+        "files_processed": [],
+        "mean_speech_rate": None,
+        "success": False
+    }
+    
+    if not audio_files:
+        result["message"] = f"未找到受試者 {subject_id} 在 {test_date} 的任何音頻文件"
+        return result
+        
+    logger.info(f"找到 {len(audio_files)} 個音頻文件供 {subject_id} 處理")
+    result["files_processed"] = [f.name for f in audio_files]
+    
+    text_reading_processor = TextReadingProcessor(
+        input_path=DATA_DIR / "TextReading",
+        output_path=DATA_DIR / "TextReading"
+    )
 
-        csv_files = []
-        for audio_file in audio_files:
-            logger.info(f"處理音頻文件：{audio_file}")
-            csv_file = text_reading_processor.generate_csv(audio_file)
-            if csv_file:
-                csv_files.append(csv_file)
+    csv_files = []
+    for audio_file in audio_files:
+        logger.info(f"處理音頻文件：{audio_file}")
+        csv_file = text_reading_processor.generate_csv(audio_file)
+        if csv_file:
+            csv_files.append(csv_file)
 
-        if csv_files:
-            mean_speech_rate = text_reading_processor.calculate_mean_syllable_speech_rate(csv_files)
-            if mean_speech_rate is not None:
-                result_df = pd.DataFrame({
-                    'ID': [subject_id],
-                    'LANGUAGE_READING_BEH_NULL_MeanSR': [mean_speech_rate]
-                })
-                update_json_result(subject_id, result_df)
-            else:
-                logger.warning(f"未能成功計算出 {subject_id} 的平均語速")
+    if csv_files:
+        mean_speech_rate = text_reading_processor.calculate_mean_syllable_speech_rate(csv_files)
+        if mean_speech_rate is not None:
+            result_df = pd.DataFrame({
+                'ID': [subject_id],
+                'LANGUAGE_READING_BEH_NULL_MeanSR': [mean_speech_rate]
+            })
+            update_json_result(subject_id, result_df)
+            result.update({
+                "status": "success",
+                "message": "成功處理音頻文件並計算平均語速",
+                "mean_speech_rate": mean_speech_rate,
+                "success": True
+            })
         else:
-            logger.warning(f"未能生成 {subject_id} 的任何 .words.csv 文件")
+            result["message"] = f"未能成功計算出 {subject_id} 的平均語速"
     else:
-        logger.warning(f"未找到 {subject_id} 的任何 .webm 音頻文件")
+        result["message"] = f"未能生成 {subject_id} 的任何 .words.csv 文件"
+    
+    return result
 
 def update_json_result(subject_id, result_df):
     json_file_path = os.path.join(base_path, 'online_platform_intergration', 'integrated_results', f"{subject_id}_integrated_result.json")
@@ -168,8 +194,6 @@ def update_json_result(subject_id, result_df):
         json.dump(existing_data, json_file, indent=2)
     logger.info(f"已更新 {subject_id} 的整合結果，保存至 {json_file_path}")
 
-class SubjectReprocessRequest(BaseModel):
-    subject_id: str
 
 def reprocess_subject_data(subject_id: str):
     logger.info(f"開始重新處理受試者 ID: {subject_id} 的本地數據")
@@ -283,16 +307,19 @@ async def get_integrated_result(request: SubjectDownloadRequest, token: str = De
 
     return {"status": "ok", "integrated_result": integrated_result}
 
-@app.post("/reprocess")
-async def reprocess_subject(request: SubjectReprocessRequest, background_tasks: BackgroundTasks, token: str = Depends(authenticate_gitlab)):
+@app.post("/process_textreading")
+async def reprocess_subject(
+    request: SubjectReprocessRequest, 
+    token: str = Depends(authenticate_gitlab)
+):
     subject_id = request.subject_id
-    logger.info(f"開始重新處理受試者 ID: {subject_id} 的數據")
+    test_date = request.test_date
+    logger.info(f"開始處理受試者 ID: {subject_id} 在 {test_date} 的語音數據")
 
-    # 從所有允許的專案中重新處理受試者數據
-    # background_tasks.add_task(reprocess_subject_data, subject_id)
-    background_tasks.add_task(process_text_reading, subject_id)
-
-    return {"status": "processing", "message": f"受試者 ID: {subject_id} 的數據正在重新處理"}
+    # 直接處理並等待結果
+    result = process_text_reading(subject_id, test_date)
+    
+    return result
 
 
 # === 主程序入口 ===
