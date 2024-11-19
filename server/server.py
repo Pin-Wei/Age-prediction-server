@@ -1,10 +1,8 @@
-
 import json
 import logging
 import os
 from datetime import datetime
 from pathlib import Path
-
 import pandas as pd
 import requests
 from convert import convert_file, make_summary, parse_with_jar
@@ -23,7 +21,7 @@ load_dotenv()
 
 class SubjectReprocessRequest(BaseModel):
     subject_id: str
-    test_date: str  # 新增日期參數，格式如：2024-08-07_11h53.59.456
+    csv_filename: str  # 改為接收 CSV 檔案名稱
 
 # 設置常數和配置
 ENDPOINT = "https://gitlab.pavlovia.org/api/v4/projects/{}/repository/files/data%2F{}/raw?ref=master"
@@ -121,18 +119,35 @@ def process_file(project_name, filepath):
 
     return result_df
 
-def process_text_reading(subject_id: str, test_date: str) -> dict:
-    # 構建特定日期的檔案匹配模式
-    pattern = f"TextReading/{subject_id}_TextReading_{test_date}_recording_mic_*.webm"
-    audio_files = list(DATA_DIR.glob(pattern))
-    
+def process_text_reading(subject_id: str, csv_filename: str) -> dict:
     result = {
         "status": "error",
         "message": "",
         "files_processed": [],
         "mean_speech_rate": None,
-        "success": False
+        "success": False,
+        "csv_filename": csv_filename
     }
+    
+    # 讀取 CSV 檔案取得日期
+    csv_path = DATA_DIR / "TextReading" / csv_filename
+    if not csv_path.exists():
+        result["message"] = f"找不到 CSV 檔案：{csv_filename}"
+        return result
+    
+    try:
+        df = pd.read_csv(csv_path)
+        test_date = df['date'].iloc[0]  # 格式如：2024-10-29_11h04.28.020
+        # 不需要轉換格式，直接使用原始格式
+        logger.info(f"從 CSV 讀取到的日期: {test_date}")
+    except Exception as e:
+        result["message"] = f"讀取 CSV 檔案失敗：{str(e)}"
+        return result
+    
+    # 構建音檔匹配模式，使用原始格式
+    pattern = f"TextReading/{subject_id}_TextReading_{test_date}_recording_mic_*.webm"
+    logger.info(f"搜尋音檔的模式: {pattern}")
+    audio_files = list(DATA_DIR.glob(pattern))
     
     if not audio_files:
         result["message"] = f"未找到受試者 {subject_id} 在 {test_date} 的任何音頻文件"
@@ -149,28 +164,34 @@ def process_text_reading(subject_id: str, test_date: str) -> dict:
     csv_files = []
     for audio_file in audio_files:
         logger.info(f"處理音頻文件：{audio_file}")
-        csv_file = text_reading_processor.generate_csv(audio_file)
-        if csv_file:
-            csv_files.append(csv_file)
+        try:
+            csv_file = text_reading_processor.generate_csv(audio_file)
+            if csv_file:
+                csv_files.append(csv_file)
+        except Exception as e:
+            logger.error(f"處理音頻文件 {audio_file} 時發生錯誤：{str(e)}")
 
     if csv_files:
-        mean_speech_rate = text_reading_processor.calculate_mean_syllable_speech_rate(csv_files)
-        if mean_speech_rate is not None:
-            result_df = pd.DataFrame({
-                'ID': [subject_id],
-                'LANGUAGE_READING_BEH_NULL_MeanSR': [mean_speech_rate]
-            })
-            update_json_result(subject_id, result_df)
-            result.update({
-                "status": "success",
-                "message": "成功處理音頻文件並計算平均語速",
-                "mean_speech_rate": mean_speech_rate,
-                "success": True
-            })
-        else:
-            result["message"] = f"未能成功計算出 {subject_id} 的平均語速"
+        try:
+            mean_speech_rate = text_reading_processor.calculate_mean_syllable_speech_rate(csv_files)
+            if mean_speech_rate is not None:
+                result_df = pd.DataFrame({
+                    'ID': [subject_id],
+                    'LANGUAGE_READING_BEH_NULL_MeanSR': [mean_speech_rate]
+                })
+                update_json_result(subject_id, result_df)
+                result.update({
+                    "status": "success",
+                    "message": "成功處理音頻文件並計算平均語速",
+                    "mean_speech_rate": mean_speech_rate,
+                    "success": True
+                })
+            else:
+                result["message"] = "未能成功計算出平均語速"
+        except Exception as e:
+            result["message"] = f"計算平均語速時發生錯誤：{str(e)}"
     else:
-        result["message"] = f"未能生成 {subject_id} 的任何 .words.csv 文件"
+        result["message"] = "未能生成任何 .words.csv 文件"
     
     return result
 
@@ -313,12 +334,10 @@ async def reprocess_subject(
     token: str = Depends(authenticate_gitlab)
 ):
     subject_id = request.subject_id
-    test_date = request.test_date
-    logger.info(f"開始處理受試者 ID: {subject_id} 在 {test_date} 的語音數據")
+    csv_filename = request.csv_filename
+    logger.info(f"開始處理受試者 ID: {subject_id} 的 CSV 檔案：{csv_filename}")
 
-    # 直接處理並等待結果
-    result = process_text_reading(subject_id, test_date)
-    
+    result = process_text_reading(subject_id, csv_filename)
     return result
 
 
