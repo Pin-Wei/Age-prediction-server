@@ -302,7 +302,7 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
             if (project_name in ['ExclusionTask', 'ExclusionTask_JustForDemo']):
                 subject_id = filepath.stem.split('_')[0]
                 test_date = filepath.stem.split('_')[-1]
-                test_date = datetime.strptime(test_date, "%Y-%m-%dT%H%M%S.%fZ").strftime("%Y-%m-%d")
+                test_date = datetime.strptime(test_date, "%Y-%m-%dT%H%M%S.%fZ") # .strftime("%Y-%m-%d")
                 predict_result = predict(subject_id, test_date)
                 if predict_result:
                     upload_exam(predict_result)
