@@ -40,11 +40,15 @@
     * 執行腳本時，當前目錄必須在server資料夾。
     * 指令說明
         1. list: "顯示"排程檔案。
-        2. enable: 將指定排程"新增"至排程檔案。
-        3. disable: 將指定排程從排程檔案"移除"。
+        2. enable <service_name>: 將指定排程"新增"至排程檔案。
+        3. disable <service_name>: 將指定排程從排程檔案"移除"。
     * 操作舉例
         1. `cd server`
         2. `./cronjob.sh list`
+        3. `./cronjob.sh enable download_textReading_files`
+        4. `./cronjob.sh enable process_tasks`
+        5. `./cronjob.sh disable download_textReading_files`
+        6. `./cronjob.sh disable process_tasks`
     * log
         1. <root_dir>/logfile
             * crontab在執行時，如有發生錯誤，可在此檔案看到相關紀錄，協助排除問題。
