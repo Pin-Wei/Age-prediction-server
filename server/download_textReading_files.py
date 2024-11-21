@@ -1,3 +1,4 @@
+import glob
 import logging
 import os
 import shutil
@@ -57,6 +58,28 @@ def main():
 
             source_dir = os.path.join(TMP_DIR, "data")
             target_dir = os.path.join(DATA_DIR, "TextReading")
+
+            csv_files = glob.glob(f"{source_dir}/*.csv")
+            # update tasks by csv_filename
+            logger.info(f"Total csvfiles: {len(csv_files)}")
+            for csv_file in csv_files:
+                csv_filename = os.path.basename(csv_file)
+                url = f"https://qoca-api.chih-he.dev/tasks?csv_filename={csv_filename}"
+                res = requests.get(url=url)
+                if (res.status_code == 200):
+                    json_data = res.json()
+                    if len(json_data['items']) > 0:
+                        task_id = json_data['items'][0]['id']
+                        status = json_data['items'][0]['status']
+                        if status == 0:
+                            url = f"https://qoca-api.chih-he.dev/tasks/{task_id}"
+                            input_json = {
+                                "is_file_ready": 1
+                            }
+                            res = requests.put(url=url, json=input_json)
+                            if (res.status_code == 200):
+                                logger.info(f"Update Task id={task_id}")
+
             allfiles = os.listdir(source_dir)
             for f in allfiles:
                 src_path = os.path.join(source_dir, f)
