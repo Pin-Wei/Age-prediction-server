@@ -240,6 +240,40 @@ def predict():
         print("Traceback:", traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
+@app.route('/process_textreading', methods=['POST'])
+def process_textreading_proxy():
+    try:
+        data = request.get_json(force=True)
+        if not data or 'subject_id' not in data or 'csv_filename' not in data:
+            return jsonify({"error": "Missing required fields"}), 400
+
+        # Forward the request to the internal server.py
+        internal_url = 'http://localhost:8000/process_textreading'
+        headers = {
+            "X-GitLab-Token": "tcnl-project",
+            "Content-Type": "application/json"
+        }
+        
+        # Forward the request
+        response = requests.post(
+            url=internal_url,
+            json=data,
+            headers=headers
+        )
+        
+        # Return 200 immediately after successful forwarding
+        if response.status_code == 200:
+            return jsonify({"message": "Request forwarded successfully"}), 200
+        else:
+            return jsonify({
+                "error": "Internal processing failed",
+                "details": response.text
+            }), response.status_code
+
+    except Exception as e:
+        print("Error forwarding request:", str(e))
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     print("Starting Flask server...")
     app.run(host='0.0.0.0', port=8888)
