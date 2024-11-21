@@ -3,6 +3,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
+
 import pandas as pd
 import requests
 from convert import convert_file, make_summary, parse_with_jar
@@ -233,14 +234,14 @@ def reprocess_subject_data(subject_id: str):
     logger.info(f"受試者 ID: {subject_id} 的數據已重新處理完畢")
 
 def predict(id_card, test_date):
-    now = datetime.now()
-
     user_info = None
     url = f'https://qoca-api.chih-he.dev/user/{id_card}'
     res = requests.get(url=url)
     if (res.status_code == 200):
         user_info = res.json()
+        logger.info("取得使用者資訊成功")
     else:
+        logger.info("取得使用者資訊失敗")
         return None
 
     url = 'http://120.126.102.110:8888/predict'
@@ -263,16 +264,37 @@ def predict(id_card, test_date):
     return None
 
 def upload_exam(exam):
+    exam['testDate'] = datetime.strptime(exam['testDate'], "%Y-%m-%dT%H%M%S.%fZ").isoformat()
+
     url = 'https://qoca-api.chih-he.dev/exams'
     headers = {
         "Content-Type": "application/json"
     }
     res = requests.post(url=url, json=exam, headers=headers)
     if (res.status_code == 201):
-        logger.info("上傳結果成功")
-        return True
+        json_data = res.json()
+        exam_id = json_data['id']
+        logger.info(f"上傳結果成功 exam_id={exam_id}")
+        return exam_id
 
     logger.info(f"上傳結果失敗")
+    return None
+
+def create_task(exam_id, csv_filename):
+    url = 'https://qoca-api.chih-he.dev/tasks'
+    headers = {
+        "Content-Type": "application/json"
+    }
+    task = {
+        'exam_id': exam_id,
+        'csv_filename': csv_filename
+    }
+    res = requests.post(url=url, json=task, headers=headers)
+    if (res.status_code == 201):
+        logger.info("新增任務成功")
+        return True
+
+    logger.info(f"新增任務失敗")
     return False
 
 # API 端點
@@ -299,13 +321,14 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
             else:
                 process_file(project_name, filepath)
 
-            if (project_name in ['ExclusionTask', 'ExclusionTask_JustForDemo']):
+            if (project_name in ['TextReading', 'TextReading_demo', 'ExclusionTask_JustForDemo']):
                 subject_id = filepath.stem.split('_')[0]
                 test_date = filepath.stem.split('_')[-1]
-                test_date = datetime.strptime(test_date, "%Y-%m-%dT%H%M%S.%fZ") # .strftime("%Y-%m-%d")
                 predict_result = predict(subject_id, test_date)
                 if predict_result:
-                    upload_exam(predict_result)
+                    exam_id = upload_exam(predict_result)
+                    if exam_id:
+                        create_task(exam_id, filename)
             return {"status": "ok", "fetched_file": filename}
 
     raise HTTPException(status_code=404, detail="沒有有效的提交！")
