@@ -10,6 +10,9 @@
 # Ignore JSON files
 *.json
 
+# Ignore ZIP files
+*.zip
+
 # Ignore specific file patterns
 *_TextReading_*.csv
 *_exclusion_*.csv
@@ -17,6 +20,7 @@
 *_SpeechComp_*.csv
 *_GoFitts_*.csv
 *.pkl
+*_log_file
 
 # Ignore data directories
 data/*
