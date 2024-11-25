@@ -3,7 +3,7 @@
 # reference: https://blog.gtwang.org/linux/linux-crontab-cron-job-tutorial-and-examples/
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd );
-PYTHON_EXE="$SCRIPT_DIR/../.venv/bin/python"
+PYTHON_EXE="$SCRIPT_DIR/../venv/bin/python"
 COMMAND_DOWNLOAD_TEXTREADING_FILES="$PYTHON_EXE $SCRIPT_DIR/download_textReading_files.py >> $SCRIPT_DIR/../download_textReading_files_log_file 2>&1"
 COMMAND_PROCESS_TASKS="$PYTHON_EXE $SCRIPT_DIR/process_tasks.py >> $SCRIPT_DIR/../process_tasks_log_file 2>&1"
 
