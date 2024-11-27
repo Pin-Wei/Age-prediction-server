@@ -100,9 +100,11 @@ def predict():
         print(data)
 
         # API 端點 URL
-        url = "http://localhost:8000/get_integrated_result"
+        print('正在取得數據')
+        url = "http://localhost:7777/get_integrated_result"
 
         # 要發送的數據
+        print('發送內部請求')
         req_data = {
             "subject_id": data['id_card']
         }
@@ -117,6 +119,7 @@ def predict():
 
         try:
             feats = requests.post(url, json=req_data, headers=headers)
+            print('發送成功')
             
             if feats.status_code == 200:
                 result = feats.json()

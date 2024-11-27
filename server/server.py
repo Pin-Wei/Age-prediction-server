@@ -175,6 +175,7 @@ def process_text_reading(subject_id: str, csv_filename: str) -> dict:
     if csv_files:
         try:
             mean_speech_rate = text_reading_processor.calculate_mean_syllable_speech_rate(csv_files)
+            print(mean_speech_rate)
             if mean_speech_rate is not None:
                 result_df = pd.DataFrame({
                     'ID': [subject_id],
@@ -197,6 +198,11 @@ def process_text_reading(subject_id: str, csv_filename: str) -> dict:
     return result
 
 def update_json_result(subject_id, result_df):
+
+    # 先處理無效數值
+    result_df = result_df.replace([pd.NA, pd.NaT, float('inf'), float('-inf')], -999)
+    result_df = result_df.fillna(-999)
+
     json_file_path = os.path.join(base_path, 'online_platform_intergration', 'integrated_results', f"{subject_id}_integrated_result.json")
     platform_features = PLATFORM_FEATURES
     if not os.path.exists(json_file_path):
@@ -244,7 +250,7 @@ def predict(id_card, test_date):
         logger.info("取得使用者資訊失敗")
         return None
 
-    url = 'http://120.126.102.110:8888/predict'
+    url = 'http://localhost:8888/predict'
     headers = {
         "X-GitLab-Token": "tcnl-project",
         "Content-Type": "application/json"
@@ -316,15 +322,17 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
             filepath = fetch_file(project_name, project_id, filename)
             subject_id = filepath.stem.split('_')[0]
 
-            if project_name == "TextReading":
-                background_tasks.add_task(process_text_reading, subject_id)
-            else:
-                process_file(project_name, filepath)
+            # if project_name == "TextReading":
+            #     # background_tasks.add_task(process_text_reading, subject_id)
+            #     pass
+            # else:
+            process_file(project_name, filepath)
 
             if (project_name in ['TextReading', 'TextReading_demo', 'ExclusionTask_JustForDemo']):
                 subject_id = filepath.stem.split('_')[0]
                 test_date = filepath.stem.split('_')[-1]
                 predict_result = predict(subject_id, test_date)
+                print(predict_result)
                 if predict_result:
                     exam_id = upload_exam(predict_result)
                     if exam_id:
@@ -332,24 +340,6 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
             return {"status": "ok", "fetched_file": filename}
 
     raise HTTPException(status_code=404, detail="沒有有效的提交！")
-
-@app.post("/get_integrated_result")
-async def get_integrated_result(request: SubjectDownloadRequest, token: str = Depends(authenticate_gitlab)):
-    subject_id = request.subject_id
-    json_file_path = os.path.join(
-        base_path,
-        'online_platform_intergration',
-        'integrated_results',
-        f"{subject_id}_integrated_result.json"
-    )
-
-    if not os.path.exists(json_file_path):
-        raise HTTPException(status_code=404, detail=f"無法找到受試者 ID: {subject_id} 的整合結果")
-
-    with open(json_file_path, 'r') as json_file:
-        integrated_result = json.load(json_file)
-
-    return {"status": "ok", "integrated_result": integrated_result}
 
 @app.post("/process_textreading")
 async def reprocess_subject(
