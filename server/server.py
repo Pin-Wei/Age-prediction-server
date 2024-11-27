@@ -90,85 +90,6 @@ def process_file(project_name, filepath):
 
     return result_df
 
-def process_text_reading(subject_id: str, csv_filename: str) -> dict:
-    result = {
-        "status": "error",
-        "message": "",
-        "files_processed": [],
-        "mean_speech_rate": None,
-        "success": False,
-        "csv_filename": csv_filename
-    }
-    
-    # 讀取 CSV 檔案取得日期
-    csv_path = DATA_DIR / "TextReading" / csv_filename
-    if not csv_path.exists():
-        result["message"] = f"找不到 CSV 檔案：{csv_filename}"
-        return result
-    
-    try:
-        df = pd.read_csv(csv_path)
-        test_date = df['date'].iloc[0]  # 格式如：2024-10-29_11h04.28.020
-        # 不需要轉換格式，直接使用原始格式
-        logger.info(f"從 CSV 讀取到的日期: {test_date}")
-    except Exception as e:
-        result["message"] = f"讀取 CSV 檔案失敗：{str(e)}"
-        return result
-    
-    # 構建音檔匹配模式，使用原始格式
-    pattern = f"TextReading/{subject_id}_TextReading_{test_date}_recording_mic_*.webm"
-    logger.info(f"搜尋音檔的模式: {pattern}")
-    audio_files = list(DATA_DIR.glob(pattern))
-    
-    if not audio_files:
-        result["message"] = f"未找到受試者 {subject_id} 在 {test_date} 的任何音頻文件"
-        return result
-        
-    logger.info(f"找到 {len(audio_files)} 個音頻文件供 {subject_id} 處理")
-    result["files_processed"] = [f.name for f in audio_files]
-    
-    text_reading_processor = TextReadingProcessor(
-        input_path=DATA_DIR / "TextReading",
-        output_path=DATA_DIR / "TextReading"
-    )
-
-    csv_files = []
-    for audio_file in audio_files:
-        logger.info(f"處理音頻文件：{audio_file}")
-        try:
-            csv_file = text_reading_processor.generate_csv(audio_file)
-            if csv_file:
-                csv_files.append(csv_file)
-        except Exception as e:
-            logger.error(f"處理音頻文件 {audio_file} 時發生錯誤：{str(e)}")
-
-    if csv_files:
-        try:
-            mean_speech_rate = text_reading_processor.calculate_mean_syllable_speech_rate(csv_files)
-            print(mean_speech_rate)
-            if mean_speech_rate is not None:
-                if pd.isna(mean_speech_rate) or mean_speech_rate == float('inf'):
-                    mean_speech_rate = -999  # 替換為 JSON 兼容值
-                result_df = pd.DataFrame({
-                    'ID': [subject_id],
-                    'LANGUAGE_READING_BEH_NULL_MeanSR': [mean_speech_rate]
-                })
-                update_json_result(subject_id, result_df)
-                result.update({
-                    "status": "success",
-                    "message": "成功處理音頻文件並計算平均語速",
-                    "mean_speech_rate": mean_speech_rate,
-                    "success": True
-                })
-            else:
-                result["message"] = "未能成功計算出平均語速"
-        except Exception as e:
-            result["message"] = f"計算平均語速時發生錯誤：{str(e)}"
-    else:
-        result["message"] = "未能生成任何 .words.csv 文件"
-    
-    return result
-
 def update_json_result(subject_id, result_df):
 
     # 先處理無效數值
@@ -294,10 +215,6 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
             filepath = fetch_file(project_name, project_id, filename)
             subject_id = filepath.stem.split('_')[0]
 
-            # if project_name == "TextReading":
-            #     # background_tasks.add_task(process_text_reading, subject_id)
-            #     pass
-            # else:
             process_file(project_name, filepath)
 
             if (project_name in ['TextReading', 'TextReading_demo', 'ExclusionTask_JustForDemo']):
@@ -312,19 +229,6 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
             return {"status": "ok", "fetched_file": filename}
 
     raise HTTPException(status_code=404, detail="沒有有效的提交！")
-
-@app.post("/process_textreading")
-async def reprocess_subject(
-    request: SubjectReprocessRequest, 
-    token: str = Depends(authenticate_gitlab)
-):
-    subject_id = request.subject_id
-    csv_filename = request.csv_filename
-    logger.info(f"開始處理受試者 ID: {subject_id} 的 CSV 檔案：{csv_filename}")
-
-    result = process_text_reading(subject_id, csv_filename)
-    return result
-
 
 # === 主程序入口 ===
 

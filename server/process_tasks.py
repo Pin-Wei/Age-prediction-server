@@ -18,7 +18,7 @@ def process_task(task_id, exam_id, csv_filename):
     subject_id = csv_filename.split('_')[0]
     test_date = os.path.splitext(csv_filename)[0].split('_')[-1]
 
-    url = 'http://120.126.102.110:8888/process_textreading'
+    url = 'http://localhost:6666/process_textreading'
     headers = {
         "X-GitLab-Token": "tcnl-project",
         "Content-Type": "application/json"
@@ -28,6 +28,8 @@ def process_task(task_id, exam_id, csv_filename):
         "csv_filename": csv_filename
     }
     res = requests.post(url=url, json=json_data, headers=headers)
+    logger.info(f"POST {url} 請求送出成功")
+    
     if (res.status_code == 200):
         logger.info("process_textreading 成功")
     else:
