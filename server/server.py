@@ -17,6 +17,7 @@ from online_platform_intergration.Textreading_Task.textreading_processor import 
     TextReadingProcessor,
 )
 from pydantic import BaseModel
+import util
 
 load_dotenv()
 
@@ -37,38 +38,7 @@ logger = logging.getLogger(__name__)
 # FastAPI 應用初始化
 app = FastAPI(docs_url=None)
 
-PLATFORM_FEATURES = [
-    "MOTOR_GOFITTS_BEH_ID1_LeaveTime", "MOTOR_GOFITTS_BEH_ID2_LeaveTime",
-    "MOTOR_GOFITTS_BEH_ID3_LeaveTime", "MOTOR_GOFITTS_BEH_ID4_LeaveTime",
-    "MOTOR_GOFITTS_BEH_ID5_LeaveTime", "MOTOR_GOFITTS_BEH_ID6_LeaveTime",
-    "MOTOR_GOFITTS_BEH_ID1_PointTime", "MOTOR_GOFITTS_BEH_ID2_PointTime",
-    "MOTOR_GOFITTS_BEH_ID3_PointTime", "MOTOR_GOFITTS_BEH_ID4_PointTime",
-    "MOTOR_GOFITTS_BEH_ID5_PointTime", "MOTOR_GOFITTS_BEH_ID6_PointTime",
-    "MOTOR_GOFITTS_BEH_SLOPE_LeaveTime", "MOTOR_GOFITTS_BEH_SLOPE_PointTime",
-    "MEMORY_EXCLUSION_BEH_C1_FAMILIARITY", "MEMORY_EXCLUSION_BEH_C2_FAMILIARITY",
-    "MEMORY_EXCLUSION_BEH_C3_FAMILIARITY", "MEMORY_EXCLUSION_BEH_C1_RECOLLECTION",
-    "MEMORY_EXCLUSION_BEH_C2_RECOLLECTION", "MEMORY_EXCLUSION_BEH_C3_RECOLLECTION",
-    "MEMORY_EXCLUSION_BEH_C1TarHit_PROPORTION", "MEMORY_EXCLUSION_BEH_C1TarMiss_PROPORTION",
-    "MEMORY_EXCLUSION_BEH_C1NonTarFA_PROPORTION", "MEMORY_EXCLUSION_BEH_C1NonTarCR_PROPORTION",
-    "MEMORY_EXCLUSION_BEH_C1NewFA_PROPORTION", "MEMORY_EXCLUSION_BEH_C1NewCR_PROPORTION",
-    "MEMORY_EXCLUSION_BEH_C1NonTarFA_RT", "MEMORY_EXCLUSION_BEH_C1NonTarCR_RT",
-    "MEMORY_EXCLUSION_BEH_C1NewFA_RT", "MEMORY_EXCLUSION_BEH_C1NewCR_RT",
-    "MEMORY_EXCLUSION_BEH_C2TarHit_PROPORTION", "MEMORY_EXCLUSION_BEH_C2TarMiss_PROPORTION",
-    "MEMORY_EXCLUSION_BEH_C2NonTarFA_PROPORTION", "MEMORY_EXCLUSION_BEH_C2NonTarCR_PROPORTION",
-    "MEMORY_EXCLUSION_BEH_C2NewFA_PROPORTION", "MEMORY_EXCLUSION_BEH_C2NewCR_PROPORTION",
-    "MEMORY_EXCLUSION_BEH_C2TarHit_RT", "MEMORY_EXCLUSION_BEH_C2TarMiss_RT",
-    "MEMORY_EXCLUSION_BEH_C2NonTarFA_RT", "MEMORY_EXCLUSION_BEH_C2NonTarCR_RT",
-    "MEMORY_EXCLUSION_BEH_C2NewFA_RT", "MEMORY_EXCLUSION_BEH_C2NewCR_RT",
-    "MEMORY_EXCLUSION_BEH_C3TarHit_PROPORTION", "MEMORY_EXCLUSION_BEH_C3TarMiss_PROPORTION",
-    "MEMORY_EXCLUSION_BEH_C3NonTarFA_PROPORTION", "MEMORY_EXCLUSION_BEH_C3NonTarCR_PROPORTION",
-    "MEMORY_EXCLUSION_BEH_C3NewFA_PROPORTION", "MEMORY_EXCLUSION_BEH_C3NewCR_PROPORTION",
-    "MEMORY_EXCLUSION_BEH_C3TarHit_RT", "MEMORY_EXCLUSION_BEH_C3TarMiss_RT",
-    "MEMORY_EXCLUSION_BEH_C3NonTarFA_RT", "MEMORY_EXCLUSION_BEH_C3NonTarCR_RT",
-    "MEMORY_EXCLUSION_BEH_C3NewFA_RT", "MEMORY_EXCLUSION_BEH_C3NewCR_RT",
-    "MEMORY_OSPAN_BEH_LETTER_ACCURACY", "MEMORY_OSPAN_BEH_MATH_ACCURACY",
-    "LANGUAGE_SPEECHCOMP_BEH_PASSIVE_ACCURACY",
-    "LANGUAGE_SPEECHCOMP_BEH_PASSIVE_RT", "LANGUAGE_READING_BEH_NULL_MeanSR"
-]
+PLATFORM_FEATURES = util.init_platform_features()
 
 # 初始化整合器和其他配置
 base_path = os.path.dirname(os.path.abspath(__file__))
@@ -177,6 +147,8 @@ def process_text_reading(subject_id: str, csv_filename: str) -> dict:
             mean_speech_rate = text_reading_processor.calculate_mean_syllable_speech_rate(csv_files)
             print(mean_speech_rate)
             if mean_speech_rate is not None:
+                if pd.isna(mean_speech_rate) or mean_speech_rate == float('inf'):
+                    mean_speech_rate = -999  # 替換為 JSON 兼容值
                 result_df = pd.DataFrame({
                     'ID': [subject_id],
                     'LANGUAGE_READING_BEH_NULL_MeanSR': [mean_speech_rate]
