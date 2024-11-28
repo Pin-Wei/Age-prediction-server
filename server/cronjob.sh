@@ -18,7 +18,7 @@ case "$1" in
         elif [ "$2" == "process_tasks" ]
         then
             echo "enable cronjob: $COMMAND_PROCESS_TASKS";
-            (crontab -l ; echo "*/10 * * * * $COMMAND_PROCESS_TASKS") | crontab -
+            (crontab -l ; echo "*/20 * * * * $COMMAND_PROCESS_TASKS") | crontab -
         else
             echo "service '$2' unknown"
         fi
