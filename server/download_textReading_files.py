@@ -2,6 +2,7 @@ import glob
 import logging
 import os
 import shutil
+import time
 import zipfile
 from datetime import datetime
 
@@ -46,10 +47,17 @@ def main():
             TMP_DIR = os.path.join(DATA_DIR, "tmp")
             os.makedirs(TMP_DIR, exist_ok=True)
 
+            time.sleep(10)
+
             path_to_zip_file = os.path.join(TMP_DIR, filename)
-            res = requests.get(url=download_url)
-            with open(path_to_zip_file, "wb") as file:
-                file.write(res.content)
+            with requests.get(download_url, stream=True) as r:
+                r.raise_for_status()
+                with open(path_to_zip_file, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        # If you have chunk encoded response uncomment if
+                        # and set chunk_size parameter to None.
+                        #if chunk:
+                        f.write(chunk)
             logger.info(f"Download zipfile to {path_to_zip_file}")
 
             with zipfile.ZipFile(path_to_zip_file, "r") as zip_ref:
