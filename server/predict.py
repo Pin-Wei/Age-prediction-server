@@ -10,6 +10,8 @@ import json
 from datetime import datetime
 import util
 
+USING_PERCENTILE_PREDICTION = True
+
 app = Flask(__name__)
 
 float_formatter = "{:.2f}".format
@@ -198,14 +200,64 @@ def predict():
                 })
         
         prediction = float(model.predict(df_scaled[platform])[0]) if age != -1 else -1
-        corrected_age = float(apply_age_correction(
-            predictions=[prediction],
-            true_ages=[age],
-            correction_ref=pd.read_csv(f'./prediction/model/{age_abb}_ref.csv')
-        )[0]) if age != -1 else -1
-        
-        original_pad = prediction - age if age != -1 else -1
-        age_corrected_pad = corrected_age - age if age != -1 else -1
+
+        if USING_PERCENTILE_PREDICTION:
+            # 第1步：辨認受試者的年齡組別，並取得該組別的中位數
+            age_bins = [-np.inf, 24, 30, 35, 45, 55, 65, np.inf]
+            age_groups = ['<25', '25-30', '30-35', '35-45', '45-55', '55-65', '>=65']
+            age_group_medians = {'<25': 20, '25-30': 27.5, '30-35': 32.5, '35-45': 40, '45-55': 50, '55-65': 60, '>=65': 70}
+
+            age_label = pd.cut([age], bins=age_bins, labels=age_groups)[0]
+            median_age = age_group_medians[str(age_label)]
+
+            # 第2步：計算各個領域的百分位數，並計算加權分數
+            domain_percentiles = {}
+            for item in cognitive_functions_result:
+                domain_name = item['name']
+                domain_percentile = item['score']
+                domain_percentiles[domain_name] = domain_percentile
+
+            valid_domain_scores = []
+            for domain_name, percentile in domain_percentiles.items():
+                if percentile != -1:
+                    weighted_score = (50 - percentile) / 50
+                    valid_domain_scores.append(weighted_score)
+                else:
+                    # 該領域無效，不進行計算
+                    pass
+
+            # 加總所有有效領域的分數
+            total_weighted_score = sum(valid_domain_scores)
+
+            # 第3步：計算每個領域測驗的變動影響力
+            N_valid = len(valid_domain_scores)
+            if N_valid > 0:
+                impact_per_domain = 20 / N_valid
+
+                # 第4步：計算腦齡
+                brain_age = median_age + impact_per_domain * total_weighted_score
+
+                # 將 prediction 變數取代為新的腦齡計算結果
+                prediction = brain_age
+            else:
+                # 若沒有有效的領域，則使用中位數作為預測值
+                prediction = median_age
+
+            # 由於已經使用新的計算方式，不需要進行年齡校正
+            corrected_age = prediction
+            original_pad = prediction - age if age != -1 else -1
+            age_corrected_pad = original_pad
+
+        else:
+            # 保留原始的預測流程
+            corrected_age = float(apply_age_correction(
+                predictions=[prediction],
+                true_ages=[age],
+                correction_ref=pd.read_csv(f'./prediction/model/{age_abb}_ref.csv')
+            )[0]) if age != -1 else -1
+
+            original_pad = prediction - age if age != -1 else -1
+            age_corrected_pad = corrected_age - age if age != -1 else -1
         
         response = {
             "id_card": user_id,
