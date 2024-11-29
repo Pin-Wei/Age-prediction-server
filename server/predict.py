@@ -17,7 +17,6 @@ METADATA = 412
 
 def init_platform_feat():
     platform_features = util.init_platform_featuress
-
     return platform_features
 
 def get_feature_names(model):
@@ -32,9 +31,6 @@ def apply_age_correction(predictions, true_ages, correction_ref):
     corrected_predictions = []
     age_groups = ['<25', '25-30', '30-35', '35-45', '45-55', '55-65', '>=65']
     age_bins = [-1, 24, 30, 35, 45, 55, 65, 100]
-
-    # age_groups = ['<40', '>=40']
-    # age_bins = [-1, 39, 100]
 
     for pred, true_age in zip(predictions, true_ages):
         df = (
@@ -156,8 +152,25 @@ def predict():
         avg_scores = {}
         for function, features in cognitive_functions.items():
             if features:
-                function_scores = df_scaled[features].mean(axis=1)
-                avg_scores[function] = function_scores.iloc[0]
+                # Get the missing mask for the features in this domain
+                missing_mask = negative_999_mask[features]
+                num_missing = missing_mask.sum(axis=1)
+                total_features = len(features)
+                missing_ratio = num_missing / total_features
+
+                if function == "語言產出":
+                    # For '語言產出' domain, which only has one feature
+                    if negative_999_mask['LANGUAGE_READING_BEH_NULL_MeanSR'].iloc[0]:
+                        avg_scores[function] = np.nan
+                    else:
+                        function_scores = df_scaled[features].mean(axis=1)
+                        avg_scores[function] = function_scores.iloc[0]
+                else:
+                    if missing_ratio.iloc[0] > 0.5:
+                        avg_scores[function] = np.nan
+                    else:
+                        function_scores = df_scaled[features].mean(axis=1)
+                        avg_scores[function] = function_scores.iloc[0]
             else:
                 avg_scores[function] = np.nan
         
@@ -169,6 +182,11 @@ def predict():
             if function in avg_scores and not np.isnan(avg_scores[function]):
                 percentile_values = percentiles[function].sort_values().values
                 percentile = np.interp(avg_scores[function], [0, 1], [0, 100])
+
+                # 如果是 "動作" (MOTOR)，反轉百分位數
+                if function == "動作":
+                    percentile = 100 - percentile
+
                 cognitive_functions_result.append({
                     "name": function,
                     "score": int(round(percentile))
@@ -205,6 +223,7 @@ def predict():
             }
         }
         
+        print(response)
         return jsonify(response), 200
     
     except Exception as e:
