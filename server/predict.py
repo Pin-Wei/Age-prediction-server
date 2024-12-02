@@ -144,9 +144,13 @@ def predict():
         platform = get_feature_names(model)
         
         cognitive_functions = {
-            "工作記憶": ["MEMORY_OSPAN_BEH_LETTER_COUNT", "MEMORY_OSPAN_BEH_MATH_ACCURACY"],
-            "情節記憶": [col for col in platform if col.startswith("MEMORY_EXCLUSION_BEH")],
-            "語言理解": ["LANGUAGE_SPEECHCOMP_BEH_PASSIVE_ACCURACY", "LANGUAGE_SPEECHCOMP_BEH_PASSIVE_RT"],
+            "工作記憶": ["MEMORY_OSPAN_BEH_LETTER_ACCURACY"],
+            "情節記憶": [
+                "MEMORY_EXCLUSION_BEH_C1_RECOLLECTION",
+                "MEMORY_EXCLUSION_BEH_C2_RECOLLECTION",
+                "MEMORY_EXCLUSION_BEH_C3_RECOLLECTION"
+            ],
+            "語言理解":  ["LANGUAGE_SPEECHCOMP_BEH_PASSIVE_ACCURACY"],
             "語言產出": ["LANGUAGE_READING_BEH_NULL_MeanSR"], 
             "動作": [col for col in platform if col.startswith("MOTOR_GOFITTS_BEH")]
         }

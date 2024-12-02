@@ -76,7 +76,7 @@ for i_FileList in File_list:
 	Result = Letter_analysis(Data_input = Data, Trial_N = Trial_N)
 	Letter_result = Result[0]
 # Export data --------------------------------
-	Output = pandas.DataFrame({'ID': [ID], 'MEMORY_OSPAN_BEH_MATH_ACCURACY': Math_result, 'MEMORY_OSPAN_BEH_LETTER_ACCURACY': Letter_result})
+	Output = pandas.DataFrame({'ID': [ID], 'MEMORY_OSPAN_BEH_MATH_ACCURACY': Math_result, 'MEMORY_OSPAN_BEH_LETTER_ACCURACY': Letter_result*2.5})
 	Export_file = Output_path + ID + '_' + File_name
 	Output.to_csv(path_or_buf = Export_file, index = False)
 	print(ID + ' ' + 'analyzed.')
