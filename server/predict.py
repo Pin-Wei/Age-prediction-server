@@ -219,7 +219,7 @@ def predict():
             for item in cognitive_functions_result:
                 domain_name = item['name']
                 domain_percentile = item['score']
-                domain_percentiles[domain_name] = domain_percentile
+                domain_percentiles[domain_name] = domain_percentile if domain_percentile > 10 else 10
 
             valid_domain_scores = []
             for domain_name, percentile in domain_percentiles.items():
