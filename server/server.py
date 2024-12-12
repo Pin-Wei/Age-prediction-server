@@ -79,7 +79,7 @@ def process_file(project_name, filepath):
             seq_summary_path = Path(artifact_path.parent, f"{artifact_path.stem}-sequence-summary.csv")
             make_summary(participant, filepath, seq_summary_path)
         result_df = integrator.process_subject(subject_id, tasks_to_process=["GoFitts"])
-    elif project_name == "TextReading":
+    elif project_name == "TextReading" or project_name == "TextReading_demo":
         logger.info(f"TextReading 任務目前沒有特定的處理方法")
         return None
 
@@ -207,6 +207,8 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
     commits = body.get("commits", [])
     project_name = body["project"]["name"]
     project_id = body["project"]["id"]
+
+    print(commits)
 
     for commit in commits:
         if commit["title"].endswith(".csv") and commit["author"]["name"] == "Pavlovia Committer":
