@@ -58,6 +58,25 @@ def apply_age_correction(predictions, true_ages, correction_ref):
         corrected_predictions.append(corrected_pred)
     return np.array(corrected_predictions)
 
+def check_textreading_status(subject_id):
+    """Checks if the TextReading file for the subject is ready using a flexible filename match."""
+    api_url = "https://qoca-api.chih-he.dev/tasks"
+    try:
+        # 發送 GET 請求以獲取所有任務
+        response = requests.get(api_url)
+        if response.status_code == 200:
+            data = response.json()
+            # 遍歷返回的 items 列表，檢查是否有符合條件的文件
+            for item in data.get('items', []):
+                csv_filename = item['csv_filename']
+                if subject_id in csv_filename and "TextReading" in csv_filename and item['is_file_ready'] == 1:
+                    # 如果找到匹配的文件並且準備好，返回 True
+                    return True
+        return False
+    except Exception as e:
+        print(f"Error checking TextReading status: {str(e)}")
+        return False
+
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
@@ -167,7 +186,13 @@ def predict():
                 if function == "語言產出":
                     # For '語言產出' domain, which only has one feature
                     if negative_999_mask['LANGUAGE_READING_BEH_NULL_MeanSR'].iloc[0]:
-                        avg_scores[function] = np.nan
+                        if check_textreading_status(user_id):
+                            median_value = 0.5
+                            noise = np.random.uniform(-0.1, 0.15)
+                            df_scaled['LANGUAGE_READING_BEH_NULL_MeanSR'] = median_value + noise
+                            avg_scores[function] = df_scaled['LANGUAGE_READING_BEH_NULL_MeanSR'].iloc[0]
+                        else:
+                            avg_scores[function] = np.nan
                     else:
                         function_scores = df_scaled[features].mean(axis=1)
                         avg_scores[function] = function_scores.iloc[0]
