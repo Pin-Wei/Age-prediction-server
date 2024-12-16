@@ -219,7 +219,7 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
 
             process_file(project_name, filepath)
 
-            if (project_name in ['TextReading_demo']): # ['TextReading', 'TextReading_demo', 'ExclusionTask_JustForDemo']):
+            if (project_name in ['TextReading', 'TextReading_demo', 'ExclusionTask_JustForDemo']):
                 subject_id = filepath.stem.split('_')[0]
                 test_date = filepath.stem.split('_')[-1]
                 predict_result = predict(subject_id, test_date)
