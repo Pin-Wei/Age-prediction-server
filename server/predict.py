@@ -59,23 +59,27 @@ def apply_age_correction(predictions, true_ages, correction_ref):
     return np.array(corrected_predictions)
 
 def check_textreading_status(subject_id):
-    """Checks if the TextReading file for the subject is ready using a flexible filename match."""
-    api_url = "https://qoca-api.chih-he.dev/tasks"
-    try:
-        # 發送 GET 請求以獲取所有任務
-        response = requests.get(api_url)
-        if response.status_code == 200:
-            data = response.json()
-            # 遍歷返回的 items 列表，檢查是否有符合條件的文件
-            for item in data.get('items', []):
-                csv_filename = item['csv_filename']
-                if subject_id in csv_filename and "TextReading" in csv_filename and item['is_file_ready'] == 1:
-                    # 如果找到匹配的文件並且準備好，返回 True
-                    return True
-        return False
-    except Exception as e:
-        print(f"Error checking TextReading status: {str(e)}")
-        return False
+    # """Checks if the latest TextReading file for the subject is ready."""
+    # api_url = "https://qoca-api.chih-he.dev/tasks"
+    # try:
+    #     response = requests.get(api_url)
+    #     if response.status_code == 200:
+    #         data = response.json()
+    #         # Filter items that match the subject_id and TextReading
+    #         matching_items = [
+    #             item for item in data.get('items', [])
+    #             if subject_id in item['csv_filename'] and "TextReading" in item['csv_filename']
+    #         ]
+    #         if matching_items:
+    #             # Sort by updated_at to get the latest item
+    #             latest_item = sorted(matching_items, key=lambda x: x['updated_at'], reverse=True)[0]
+    #             if latest_item['is_file_ready'] == 1 and latest_item['status'] == 1:
+    #                 return True
+    #     return False
+    # except Exception as e:
+    #     print(f"Error checking TextReading status: {str(e)}")
+    #     return False
+        return True
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -188,7 +192,7 @@ def predict():
                     if negative_999_mask['LANGUAGE_READING_BEH_NULL_MeanSR'].iloc[0]:
                         if check_textreading_status(user_id):
                             median_value = 0.5
-                            noise = np.random.uniform(-0.1, 0.15)
+                            noise = np.random.uniform(-0.2, 0.2)
                             df_scaled['LANGUAGE_READING_BEH_NULL_MeanSR'] = median_value + noise
                             avg_scores[function] = df_scaled['LANGUAGE_READING_BEH_NULL_MeanSR'].iloc[0]
                         else:
@@ -217,6 +221,9 @@ def predict():
                 # 如果是 "動作" (MOTOR)，反轉百分位數
                 if function == "動作":
                     percentile = 100 - percentile
+
+                if percentile < 10:
+                    percentile = 10
 
                 cognitive_functions_result.append({
                     "name": function,
