@@ -1,11 +1,12 @@
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
 import requests
+import util
 from convert import convert_file, make_summary, parse_with_jar
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
@@ -17,7 +18,6 @@ from online_platform_intergration.Textreading_Task.textreading_processor import 
     TextReadingProcessor,
 )
 from pydantic import BaseModel
-import util
 
 load_dotenv()
 
@@ -132,7 +132,7 @@ def reprocess_subject_data(subject_id: str):
     
     logger.info(f"受試者 ID: {subject_id} 的數據已重新處理完畢")
 
-def predict(id_card, test_date):
+def predict(id_card):
     user_info = None
     url = f'https://qoca-api.chih-he.dev/user/{id_card}'
     res = requests.get(url=url)
@@ -148,11 +148,13 @@ def predict(id_card, test_date):
         "X-GitLab-Token": "tcnl-project",
         "Content-Type": "application/json"
     }
+
+    now = datetime.now(timezone.utc)
     json = {
         "age": user_info['age'],
         "id_card": id_card,
         "name": user_info['name'],
-        "test_date": test_date,
+        "test_date": now.strftime('%Y-%m-%dT%H%M%S.') + f"{int(now.microsecond / 1000):03d}Z",
     }
     res = requests.post(url=url, json=json, headers=headers)
     if (res.status_code == 200):
@@ -221,8 +223,7 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
 
             if (project_name in ['TextReading', 'TextReading_demo', 'ExclusionTask_JustForDemo']):
                 subject_id = filepath.stem.split('_')[0]
-                test_date = filepath.stem.split('_')[-1]
-                predict_result = predict(subject_id, test_date)
+                predict_result = predict(subject_id)
                 print(predict_result)
                 if predict_result:
                     exam_id = upload_exam(predict_result)
@@ -231,6 +232,18 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
             return {"status": "ok", "fetched_file": filename}
 
     raise HTTPException(status_code=404, detail="沒有有效的提交！")
+
+@app.post('/report')
+async def create_report(request: Request):
+    body = await request.json()
+    subject_id = body.get("subject_id")
+
+    predict_result = predict(subject_id)
+    print(predict_result)
+    if predict_result:
+        exam_id = upload_exam(predict_result)
+
+    return {"status": "ok"}
 
 # === 主程序入口 ===
 
