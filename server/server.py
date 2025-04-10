@@ -242,8 +242,9 @@ async def create_report(request: Request):
     print(predict_result)
     if predict_result:
         exam_id = upload_exam(predict_result)
-
-    return {"status": "ok"}
+        return {"status": "ok", 'exam_id': exam_id}
+    else:
+        raise HTTPException(status_code=422, detail="Prediction failed")
 
 # === 主程序入口 ===
 
