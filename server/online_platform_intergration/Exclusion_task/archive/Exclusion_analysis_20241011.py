@@ -104,7 +104,7 @@ for i_FileList in File_list:
 	Data = pandas.read_csv((Input_path + i_FileList))
 	Data.rename(columns={'key_resp.keys': 'key_resp_keys'}, inplace = True) # rename variable
 # Rearrange data -----------------------------
-	ID = Data.loc[0, '指定代號']
+	ID = Data.loc[0, '身分證字號']
 	Data = Data[['number_of_cue_t', 'key_resp_keys', 'key_resp.rt', 'stimuli_t']]
 	Data = Select_item(Data_input = Data, Trial_N = Trial_N)
 # Calculation --------------------------------
@@ -112,17 +112,14 @@ for i_FileList in File_list:
 	Yes_rate = RateCalculation_stimulus_cue(Data_input = Data)
 	No_rate = [(1 - each) for each in Yes_rate]
 # Record rates -------------------------------
-	NonTarFA = [Yes_rate[1], Yes_rate[4], Yes_rate[7]]
-	RECOLLECTION = [(Yes_rate[0] - NonTarFA[0]), (Yes_rate[3] - NonTarFA[1]), (Yes_rate[6] - NonTarFA[2])]
-	FAMILIARITY = [NonTarFA[Each]/(1 - RECOLLECTION[Each]) if RECOLLECTION[Each] != 1 else NonTarFA[Each]/(1 - 0.999) for Each in range(3)]
 	Output = pandas.DataFrame({
 		'ID': [ID],
-		'MEMORY_EXCLUSION_BEH_C1_FAMILIARITY': FAMILIARITY[0], 
-		'MEMORY_EXCLUSION_BEH_C2_FAMILIARITY': FAMILIARITY[1],
-		'MEMORY_EXCLUSION_BEH_C3_FAMILIARITY': FAMILIARITY[2],
-		'MEMORY_EXCLUSION_BEH_C1_RECOLLECTION': RECOLLECTION[0], 
-		'MEMORY_EXCLUSION_BEH_C2_RECOLLECTION': RECOLLECTION[1],
-		'MEMORY_EXCLUSION_BEH_C3_RECOLLECTION': RECOLLECTION[2],
+		'MEMORY_EXCLUSION_BEH_C1_FAMILIARITY': Yes_rate[1]/(1 - (Yes_rate[0] - Yes_rate[1])), 
+		'MEMORY_EXCLUSION_BEH_C2_FAMILIARITY': Yes_rate[4]/(1 - (Yes_rate[3] - Yes_rate[4])),
+		'MEMORY_EXCLUSION_BEH_C3_FAMILIARITY': Yes_rate[7]/(1 - (Yes_rate[6] - Yes_rate[7])),
+		'MEMORY_EXCLUSION_BEH_C1_RECOLLECTION': (Yes_rate[0] - Yes_rate[1]), 
+		'MEMORY_EXCLUSION_BEH_C2_RECOLLECTION': (Yes_rate[3] - Yes_rate[4]),
+		'MEMORY_EXCLUSION_BEH_C3_RECOLLECTION': (Yes_rate[6] - Yes_rate[7]),
 # Cue 1 --------------------------------------
 		'MEMORY_EXCLUSION_BEH_C1TarHit_PROPORTION': Yes_rate[0],
 		'MEMORY_EXCLUSION_BEH_C1TarMiss_PROPORTION': No_rate[0],

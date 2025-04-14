@@ -68,7 +68,7 @@ if 'Archive' in File_list:
 for i_FileList in File_list:
 	Data = pandas.read_csv((Input_path + i_FileList))
 # Record ID ----------------------------------
-	ID = Data.loc[0, '指定代號']
+	ID = Data.loc[0, '身分證字號']
 # Math ---------------------------------------
 	Result = Math_analysis(Data_input = Data, Trial_N = Trial_N)
 	Math_result = Result[0]
@@ -76,7 +76,7 @@ for i_FileList in File_list:
 	Result = Letter_analysis(Data_input = Data, Trial_N = Trial_N)
 	Letter_result = Result[0]
 # Export data --------------------------------
-	Output = pandas.DataFrame({'ID': [ID], 'MEMORY_OSPAN_BEH_MATH_ACCURACY': Math_result, 'MEMORY_OSPAN_BEH_LETTER_ACCURACY': Letter_result*2.5}) # There are 75 trials in the ospan task, but only 30 trials in the online version. Therefore for the calculation of percentile rank which uses the distribution of "LETTER_COUNT" in quanta feature matrix, the behavioral result (letter_result) of online version is needed to be times 2.5 (30*2.5 = 75) to fit in the "LETTER_COUNT" distribution.
+	Output = pandas.DataFrame({'ID': [ID], 'MEMORY_OSPAN_BEH_MATH_ACCURACY': Math_result, 'MEMORY_OSPAN_BEH_LETTER_ACCURACY': Letter_result*2.5})
 	Export_file = Output_path + ID + '_' + File_name
 	Output.to_csv(path_or_buf = Export_file, index = False)
 	print(ID + ' ' + 'analyzed.')

@@ -28,7 +28,7 @@ class SubjectReprocessRequest(BaseModel):
 # 設置常數和配置
 ENDPOINT = "https://gitlab.pavlovia.org/api/v4/projects/{}/repository/files/data%2F{}/raw?ref=master"
 DATA_DIR = Path("../data")
-ALLOWED_PROJECTS = ["ExclusionTask", "GoFitts", "OspanTask", "SpeechComp", "TextReading"]
+ALLOWED_PROJECTS = ["GoFitts", "OspanTask", "SpeechComp", "ExclusionTask", "ExclusionTask_ElderVersion", "TextReading", "TextReading2025"]
 GITLAB_TOKEN = os.getenv("GITLAB_TOKEN")
 
 # 日誌配置
@@ -66,7 +66,7 @@ def process_file(project_name, filepath):
     subject_id = filepath.stem.split('_')[0]
     result_df = None
 
-    if project_name == "ExclusionTask":
+    if project_name == "ExclusionTask_ElderVersion":
         result_df = integrator.process_subject(subject_id, tasks_to_process=["exclusion"])
     elif project_name == "OspanTask":
         result_df = integrator.process_subject(subject_id, tasks_to_process=["OspanTask"])
@@ -79,8 +79,8 @@ def process_file(project_name, filepath):
             seq_summary_path = Path(artifact_path.parent, f"{artifact_path.stem}-sequence-summary.csv")
             make_summary(participant, filepath, seq_summary_path)
         result_df = integrator.process_subject(subject_id, tasks_to_process=["GoFitts"])
-    elif project_name == "TextReading" or project_name == "TextReading_demo":
-        logger.info(f"TextReading 任務目前沒有特定的處理方法")
+    elif project_name in ["TextReading", "TextReading_demo", "TextReading2025"]:
+        logger.info(f"暫時略過 TextReading 的資料下載與處理")
         return None
 
     if result_df is not None:
@@ -158,10 +158,10 @@ def predict(id_card):
     }
     res = requests.post(url=url, json=json, headers=headers)
     if (res.status_code == 200):
-        logger.info("取得特徵成功")
+        logger.info("成功取得預測結果")
         return res.json()
 
-    logger.info("取得特徵失敗")
+    logger.info("預測結果取得失敗")
     return None
 
 def upload_exam(exam):
@@ -177,8 +177,8 @@ def upload_exam(exam):
         exam_id = json_data['id']
         logger.info(f"上傳結果成功 exam_id={exam_id}")
         return exam_id
-
-    logger.info(f"上傳結果失敗")
+    else:
+        logger.info(f"上傳結果失敗")
     return None
 
 def create_task(exam_id, csv_filename):
@@ -194,8 +194,8 @@ def create_task(exam_id, csv_filename):
     if (res.status_code == 201):
         logger.info("新增任務成功")
         return True
-
-    logger.info(f"新增任務失敗")
+    else:
+        logger.info(f"新增任務失敗")
     return False
 
 # API 端點
@@ -221,7 +221,7 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
 
             process_file(project_name, filepath)
 
-            if (project_name in ['TextReading', 'TextReading_demo', 'ExclusionTask_JustForDemo']):
+            if (project_name in ['TextReading', 'TextReading_demo', 'TextReading2025']):
                 subject_id = filepath.stem.split('_')[0]
                 predict_result = predict(subject_id)
                 print(predict_result)
