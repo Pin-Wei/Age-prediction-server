@@ -6,7 +6,7 @@ import os
 
 from pathlib import Path
 
-ID_COL_NAME = "身分證字號"
+ID_COL_NAME = "指定代號"
 HALF_WIDTH = 960
 HALF_HEIGHT = 540
 

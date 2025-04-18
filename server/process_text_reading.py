@@ -28,7 +28,7 @@ class SubjectReprocessRequest(BaseModel):
 # 設置常數和配置
 ENDPOINT = "https://gitlab.pavlovia.org/api/v4/projects/{}/repository/files/data%2F{}/raw?ref=master"
 DATA_DIR = Path("../data")
-ALLOWED_PROJECTS = ["ExclusionTask", "GoFitts", "OspanTask", "SpeechComp", "TextReading"]
+ALLOWED_PROJECTS = ["ExclusionTask", "GoFitts", "OspanTask", "SpeechComp", "TextReading", "TextReading2025"]
 GITLAB_TOKEN = os.getenv("GITLAB_TOKEN")
 
 # 日誌配置
@@ -86,7 +86,7 @@ def process_text_reading(subject_id: str, csv_filename: str) -> dict:
     }
     
     # 讀取 CSV 檔案取得日期
-    csv_path = DATA_DIR / "TextReading" / csv_filename
+    csv_path = DATA_DIR / "TextReading2025" / csv_filename
     if not csv_path.exists():
         result["message"] = f"找不到 CSV 檔案：{csv_filename}"
         return result
@@ -101,7 +101,7 @@ def process_text_reading(subject_id: str, csv_filename: str) -> dict:
         return result
     
     # 構建音檔匹配模式，使用原始格式
-    pattern = f"TextReading/{subject_id}_TextReading_{test_date}_recording_mic_*.webm"
+    pattern = f"TextReading2025/{subject_id}_TextReading_{test_date}_recording_mic_*.webm"
     logger.info(f"搜尋音檔的模式: {pattern}")
     audio_files = list(DATA_DIR.glob(pattern))
     
@@ -113,8 +113,8 @@ def process_text_reading(subject_id: str, csv_filename: str) -> dict:
     result["files_processed"] = [f.name for f in audio_files]
     
     text_reading_processor = TextReadingProcessor(
-        input_path=DATA_DIR / "TextReading",
-        output_path=DATA_DIR / "TextReading"
+        input_path=DATA_DIR / "TextReading2025",
+        output_path=DATA_DIR / "TextReading2025"
     )
 
     csv_files = []

@@ -230,8 +230,9 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
                     if exam_id:
                         create_task(exam_id, filename)
             return {"status": "ok", "fetched_file": filename}
-
-    raise HTTPException(status_code=404, detail="沒有有效的提交！")
+        
+        else:
+            raise HTTPException(status_code=404, detail="沒有有效的提交！")
 
 @app.post('/report')
 async def create_report(request: Request):

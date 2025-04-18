@@ -35,14 +35,14 @@ class OspanProcessor:
             return None
 
         data = pd.read_csv(file_path)
-        id = data.loc[0, '身分證字號']
+        id = data.loc[0, '指定代號']
         math_result = self.math_analysis(data)
         letter_result = self.letter_analysis(data)
 
         output = pd.DataFrame({
             'ID': [id],
             'MEMORY_OSPAN_BEH_MATH_ACCURACY': [math_result],
-            'MEMORY_OSPAN_BEH_LETTER_ACCURACY': [letter_result]
-        })
+            'MEMORY_OSPAN_BEH_LETTER_ACCURACY': [letter_result*2.5]
+        }) # There are 75 trials in the ospan task, but only 30 trials in the online version. Therefore for the calculation of percentile rank which uses the distribution of "LETTER_COUNT" in quanta feature matrix, the behavioral result (letter_result) of online version is needed to be times 2.5 (30*2.5 = 75) to fit in the "LETTER_COUNT" distribution.
 
         return output

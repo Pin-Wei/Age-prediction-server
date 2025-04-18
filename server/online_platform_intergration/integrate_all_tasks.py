@@ -30,8 +30,8 @@ class GoFittsProcessor:
             return None
         
         df = pd.read_csv(file_path)
-        # 確保 ID 欄位名稱為 '身分證字號'
-        df = df.rename(columns={'ID': '身分證字號'})
+        # 確保 ID 欄位名稱為 '指定代號'
+        df = df.rename(columns={'ID': '指定代號'})
         return df
 
 class TaskIntegrator:
@@ -39,7 +39,7 @@ class TaskIntegrator:
         data_path = os.path.join(base_path, '..', 'data')
         print(f"Data path: {data_path}")
         self.exclusion_processor = ExclusionProcessor(
-            input_path=os.path.join(data_path, 'ExclusionTask'),
+            input_path=os.path.join(data_path, 'ExclusionTask_ElderVersion'),
             output_path=os.path.join(base_path, 'online_platform_intergration', 'Exclusion_task', 'feature')
         )
         self.ospan_processor = OspanProcessor(
@@ -55,7 +55,7 @@ class TaskIntegrator:
             output_path=os.path.join(base_path, 'online_platform_intergration', 'GoFitts_task', 'feature')
         )
         self.textreading_processor = TextReadingProcessor(
-            input_path=os.path.join(data_path, 'TextReading'),
+            input_path=os.path.join(data_path, 'TextReading2025'),
             output_path=os.path.join(base_path, 'online_platform_intergration', 'TextReading_task', 'feature')
         )
 
@@ -72,7 +72,7 @@ class TaskIntegrator:
         if task_name == 'GoFitts':
             pattern = f"GoFitts-{subject_id}-summary.csv"
             files = glob.glob(os.path.join(directory, pattern))
-        elif task_name == 'TextReading':
+        elif task_name == 'TextReading2025':
             pattern = f"{subject_id}_TextReading_*.webm"
             files = glob.glob(os.path.join(directory, pattern))
         else:
