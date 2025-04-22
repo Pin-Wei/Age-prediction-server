@@ -2,8 +2,8 @@ import os
 import pandas as pd
 
 class SpeechcompProcessor:
-    def __init__(self, input_path, output_path=None):
-        self.input_path = input_path
+    def __init__(self, data_dir):
+        self.data_dir = data_dir
 
     def process_subject(self, file_path):
         if not os.path.exists(file_path):

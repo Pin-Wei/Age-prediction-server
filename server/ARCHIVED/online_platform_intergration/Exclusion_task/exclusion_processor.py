@@ -2,9 +2,8 @@ import os
 import pandas as pd
 
 class ExclusionProcessor:
-    def __init__(self, input_path, output_path):
+    def __init__(self, input_path, output_path=None):
         self.input_path = input_path
-        self.output_path = output_path
         self.trial_n = 18 * 3
 
     def create_index(self, data_input, trial_n):

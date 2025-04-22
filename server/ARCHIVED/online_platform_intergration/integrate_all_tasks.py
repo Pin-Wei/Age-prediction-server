@@ -181,6 +181,7 @@ def process_and_format_result(result_df, platform_features):
                 formatted_result['LANGUAGE_SPEECHCOMP_BEH_PASSIVE_ACCURACY'] = -999
             else:
                 formatted_result['LANGUAGE_SPEECHCOMP_BEH_PASSIVE_ACCURACY'] = value
+                
         if 'SPEECHCOMP_PASSIVE_RT' in result_df.columns:
             value = result_df['SPEECHCOMP_PASSIVE_RT'].iloc[0]
             if pd.isna(value):

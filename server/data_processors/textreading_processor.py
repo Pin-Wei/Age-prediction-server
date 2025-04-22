@@ -4,14 +4,16 @@ import numpy as np
 import subprocess
 
 class TextReadingProcessor:
-    def __init__(self, input_path, output_path=None):
-        self.input_path = input_path
+    def __init__(self, data_dir):
+        self.data_dir = data_dir
+        self.base_path = os.path.dirname(os.path.abspath(__file__))
 
     def generate_csv(self, audio_file):
-        result = subprocess.run(
-            ["/home/tcnl/YHL/Pavloviadata/server/online_platform_intergration/Textreading_Task/whisper_venv/bin/python", 
-            "/home/tcnl/YHL/Pavloviadata/server/online_platform_intergration/Textreading_Task/whisper_venv/get_speechrate.py", 
-            audio_file],
+        result = subprocess.run([
+                os.path.join(self.base_path, "whisper_venv", "bin", "python"), 
+                os.path.join(self.base_path, "whisper_venv", "get_speechrate.py"),
+                audio_file
+            ],
             capture_output=True,
             text=True
         )
@@ -27,7 +29,6 @@ class TextReadingProcessor:
         else:
             print(f"No .words.csv file generated for {audio_file}")
             return None
-
 
     def calculate_mean_syllable_speech_rate(self, csv_files):
         syllable_speech_rates = []
@@ -57,7 +58,10 @@ class TextReadingProcessor:
 
     def process_subject(self, subject_id):
         # 找到該受試者的所有音頻文件
-        audio_files = [f for f in os.listdir(self.input_path) if f.startswith(subject_id) and f.endswith('.webm')]
+        audio_files = [
+            f for f in os.listdir(self.input_path) 
+            if f.startswith(subject_id) and f.endswith('.webm')
+        ]
         
         if not audio_files:
             print(f"No audio files found for subject {subject_id}")

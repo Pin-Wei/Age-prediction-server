@@ -12,7 +12,7 @@ class Config:
         self.log_dir = os.path.join(self.source_dir, "..", "logs")
         self.process_textreading_url = os.getenv("PROCESS_TEXTREADING_URL")
         self.predict_url = os.getenv("PREDICT_URL")
-        self.headers = {
+        self.local_headers = {
             "X-GitLab-Token": "tcnl-project",
             "Content-Type": "application/json"
         }
@@ -23,7 +23,7 @@ def process_task(task_id, exam_id, csv_filename, config, logger):
     ## Send process_textreading request
     res = requests.post(
         url=config.process_textreading_url, 
-        headers=config.headers, 
+        headers=config.local_headers, 
         json={
             "subject_id": subject_id,
             "csv_filename": csv_filename
@@ -47,7 +47,7 @@ def process_task(task_id, exam_id, csv_filename, config, logger):
     test_date = os.path.splitext(csv_filename)[0].split('_')[-1]
     res = requests.post(
         url=config.predict_url, 
-        headers=config.headers, 
+        headers=config.local_headers, 
         json={
             "age": user_info['age'], 
             "id_card": subject_id, 

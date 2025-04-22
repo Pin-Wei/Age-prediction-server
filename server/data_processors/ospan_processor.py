@@ -2,29 +2,29 @@ import os
 import pandas as pd
 
 class OspanProcessor:
-    def __init__(self, input_path, output_path=None):
-        self.input_path = input_path
+    def __init__(self, data_dir):
+        self.data_dir = data_dir
         self.trial_n = (4*3) + (6*3)
 
-    def create_index(self, data_input, trial_n):
-        output = list(data_input.index)
+    def create_index(self, data, trial_n):
+        output = list(data.index)
         output.reverse()
         output = output[:trial_n]
         output.reverse()
         return output
 
-    def select_item(self, data_input, trial_n):
-        output = data_input.dropna(how='any')
+    def select_item(self, data, trial_n):
+        output = data.dropna(how='any')
         index = self.create_index(output, trial_n)
         return output.loc[index, :]
 
-    def math_analysis(self, data_input):
-        output = data_input[['MathResult']]
+    def math_analysis(self, data):
+        output = data[['MathResult']]
         output = self.select_item(output, self.trial_n)
         return output.mean().values[0]
 
-    def letter_analysis(self, data_input):
-        output = data_input[['LetterResult']]
+    def letter_analysis(self, data):
+        output = data[['LetterResult']]
         output = self.select_item(output, self.trial_n)
         return output.sum().values[0]
 
