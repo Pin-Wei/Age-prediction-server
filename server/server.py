@@ -161,8 +161,7 @@ def predict(id_card, config, logger):
         return None
 
 def upload_exam(exam, config, logger):
-    # exam['testDate'] = datetime.strptime(exam['testDate'], "%Y-%m-%dT%H%M%S.%fZ").isoformat()
-    exam['testDate'] = datetime.strptime(exam['testDate'], "%Y-%m-%dT%H:%M:%S.%f").isoformat()
+    exam['testDate'] = datetime.strptime(exam['testDate'], "%Y-%m-%dT%H%M%S.%fZ").isoformat()
     res = requests.post(
         url='https://qoca-api.chih-he.dev/exams', 
         headers=config.qoca_headers, 
@@ -209,6 +208,8 @@ def read_root():
 async def receive_webhook(request: Request, background_tasks: BackgroundTasks, token: str = Depends(authenticate_gitlab)):
     body = await request.json()
     commits = body.get("commits", [])
+    print(f"Received {len(commits)} commits")
+    
     project_name = body["project"]["name"]
     project_id = body["project"]["id"]
 
