@@ -1,11 +1,13 @@
 #!/bin/bash
-# 使用的排程工具是：crontab
-# reference: https://blog.gtwang.org/linux/linux-crontab-cron-job-tutorial-and-examples/
+
+# crontab: https://blog.gtwang.org/linux/linux-crontab-cron-job-tutorial-and-examples/
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd );
 PYTHON_EXE="$SCRIPT_DIR/../venv/bin/python"
-COMMAND_DOWNLOAD_TEXTREADING_FILES="$PYTHON_EXE $SCRIPT_DIR/download_textReading_files.py >> $SCRIPT_DIR/../download_textReading_files_log_file 2>&1"
-COMMAND_PROCESS_TASKS="$PYTHON_EXE $SCRIPT_DIR/process_tasks.py >> $SCRIPT_DIR/../process_tasks_log_file 2>&1"
+LOG_DOWNLOAD_TEXTREADING_FILES="$SCRIPT_DIR/../logs/cronjob_download_textReading_files.log"
+LOG_PROCESS_TASKS="$SCRIPT_DIR/../logs/cronjob_process_tasks.log"
+COMMAND_DOWNLOAD_TEXTREADING_FILES="$PYTHON_EXE $SCRIPT_DIR/download_textReading_files.py >> $LOG_DOWNLOAD_TEXTREADING_FILES 2>&1"
+COMMAND_PROCESS_TASKS="$PYTHON_EXE $SCRIPT_DIR/process_tasks.py >> $LOG_PROCESS_TASKS 2>&1"
 
 case "$1" in
     list) crontab -l;
@@ -15,7 +17,6 @@ case "$1" in
         then
             echo "enable cronjob: $COMMAND_DOWNLOAD_TEXTREADING_FILES";
             (crontab -l ; echo "0 */12 * * * $COMMAND_DOWNLOAD_TEXTREADING_FILES") | crontab -
-            # (crontab -l ; echo "*/2 * * * * $COMMAND_DOWNLOAD_TEXTREADING_FILES") | crontab -
         elif [ "$2" == "process_tasks" ]
         then
             echo "enable cronjob: $COMMAND_PROCESS_TASKS";

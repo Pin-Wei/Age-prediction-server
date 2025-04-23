@@ -10,6 +10,7 @@ class Config:
     def __init__(self):
         self.source_dir = os.path.dirname(os.path.abspath(__file__))
         self.log_dir = os.path.join(self.source_dir, "..", "logs")
+        self.log_fn_format = "processTasks_%Y-%m-%d.log"
         self.process_textreading_url = os.getenv("PROCESS_TEXTREADING_URL")
         self.predict_url = os.getenv("PREDICT_URL")
         self.local_headers = {
@@ -30,7 +31,9 @@ def process_task(task_id, exam_id, csv_filename, config, logger):
         }
     )
     if res.status_code == 200:
-        logger.info(f"成功送出 process_textreading 請求")
+        logger.info(f"Successfully sent process_textreading request for {subject_id}")
+    else:
+        logger.error(f"Failed to send process_textreading request for {subject_id}")
 
     ## Get user info
     res = requests.get(
@@ -38,10 +41,10 @@ def process_task(task_id, exam_id, csv_filename, config, logger):
     )
     if res.status_code == 200:
         user_info = res.json()
-        logger.info("成功取得受試者資訊")
+        logger.info(f"Successfully retrieved user info for {subject_id}")
     else:
         user_info = None
-        logger.info("受試者資訊取得失敗")
+        logger.error(f"Failed to retrieve user info for {subject_id}")
 
     ## Send predict request
     test_date = os.path.splitext(csv_filename)[0].split('_')[-1]
@@ -57,10 +60,10 @@ def process_task(task_id, exam_id, csv_filename, config, logger):
     )
     if res.status_code == 200:
         predict_result = res.json()
-        logger.info("成功取得預測結果")
+        logger.info(f"Successfully retrieved predict_result for {subject_id}")
     else:
         predict_result = None
-        logger.info("預測結果取得失敗")
+        logger.error(f"Failed to retrieve predict_result for {subject_id}")
     
     if predict_result is not None:
 
@@ -72,9 +75,9 @@ def process_task(task_id, exam_id, csv_filename, config, logger):
             }
         )
         if res.status_code == 200:
-            logger.info(f"更新任務 #{task_id} 狀態為 1")
+            logger.info(f"Successfully update task #{task_id} status to 1")
         else:
-            logger.error(f"更新任務 #{task_id} 狀態失敗: {res.status_code}")
+            logger.error(f"Failed to update task #{task_id}: {res.status_code}")
 
         predict_result['testDate'] = datetime.strptime(predict_result['testDate'], "%Y-%m-%dT%H%M%S.%fZ").isoformat()
         predict_result['report_status'] = 0
@@ -83,37 +86,38 @@ def process_task(task_id, exam_id, csv_filename, config, logger):
             json=predict_result
         )
         if res.status_code == 200:
-            logger.info(f"成功更新報告編號 #{exam_id} 的預測結果")
+            logger.info(f"Successfully update predict_result for exam #{exam_id}")
         else:
-            logger.error(f"報告編號 #{exam_id} 的預測結果更新失敗: {res.status_code}")
+            logger.error(f"Failed to update predict_result for exam #{exam_id}: {res.status_code}")
 
-def main():
+## ====================================================================================
+
+if __name__ == "__main__":
     load_dotenv()
     config = Config()
     
     logging.root.handlers = []
     logging.basicConfig(
         level=logging.INFO, 
-        filename=os.path.join(config.log_dir, datetime.now().strftime("cronjob_processTasks_%Y-%m-%d.log")), 
+        filename=os.path.join(config.log_dir, datetime.now().strftime(config.log_fn_format)), 
         format="%(asctime)s [%(levelname)s] %(filename)s:%(lineno)4d: %(message)s"
     )
     logger = logging.getLogger(__name__)    
-    logger.info("=== 開始執行 process_tasks.py ===")
     
     ## Search for tasks that need to be processed (is_file_ready=1 & status=0)
     res = requests.get(
-        url="https://qoca-api.chih-he.dev/tasks?size=1&is_file_ready=1&status=0"
+        url="https://qoca-api.chih-he.dev/tasks?is_file_ready=1&status=0"
     )
     if res.status_code == 200:
         json_data = res.json()
         tasks = json_data['items']
-        logger.info(f"成功取得 {len(tasks)} 筆任務數據")
-        for task in tasks:
-            process_task(
-                task['id'], task['exam_id'], task['csv_filename'], config, logger
-            )
-
-    logger.info("=== process_tasks.py 任務終了 ===")
-
-if __name__ == "__main__":
-    main()
+        if len(tasks) == 0:
+            logger.info("No tasks to process")
+        else:
+            logger.info(f"Retrieved {len(tasks)} tasks to process")
+            for task in tasks:
+                process_task(
+                    task['id'], task['exam_id'], task['csv_filename'], config, logger
+                )
+    else:
+        logger.error(f"Failed to retrieve tasks: {res.status_code}")
