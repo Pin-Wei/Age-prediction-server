@@ -160,8 +160,23 @@ def predict(id_card, config, logger):
         logger.info("Failed to retrieve prediction result")
         return None
 
+from datetime import datetime
+
+def parse_iso_date(s: str) -> str:
+    formats = [
+        "%Y-%m-%dT%H:%M:%S.%fZ", 
+        "%Y-%m-%dT%H%M%S.%fZ"
+    ]
+    for fmt in formats:
+        try:
+            return datetime.strptime(s, fmt).isoformat()
+        except ValueError:
+            continue
+    # if none of the formats match, raise an error
+    raise ValueError(f"Unknown date format: {s!r}")        
+
 def upload_exam(exam, config, logger):
-    exam['testDate'] = datetime.strptime(exam['testDate'], "%Y-%m-%dT%H%M%S.%fZ").isoformat()
+    exam['testDate'] = parse_iso_date(exam['testDate'])
     res = requests.post(
         url='https://qoca-api.chih-he.dev/exams', 
         headers=config.qoca_headers, 
