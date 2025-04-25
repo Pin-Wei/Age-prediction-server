@@ -19,7 +19,7 @@
 *_OspanTask_*.csv
 *_SpeechComp_*.csv
 *_GoFitts_*.csv
-*.pkl
+# *.pkl
 *_log_file
 
 # Ignore data directories
