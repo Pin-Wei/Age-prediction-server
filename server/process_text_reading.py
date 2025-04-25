@@ -7,43 +7,24 @@ import uvicorn
 
 import os
 import glob
+import json
 import logging
+import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
 import util
-from server import authenticate_gitlab, update_json_result
+from server import *
 from data_processors.textreading_processor import TextReadingProcessor
-
-app = FastAPI(docs_url=None)
-
-class Config:
-    def __init__(self):
-        self.source_dir = os.path.dirname(os.path.abspath(__file__))
-        self.data_dir = os.path.join(self.source_dir, "..", "data")
-        self.integrated_results_dir = os.path.join(self.source_dir, "integrated_results")
-        self.predict_url = os.getenv("PREDICT_URL")  
-        self.fetch_file_url = "https://gitlab.pavlovia.org/api/v4/projects/{}/repository/files/data%2F{}/raw?ref=master"
-        self.gitlab_token = os.getenv("GITLAB_TOKEN")
-        self.gitlab_headers = {
-            "Authorization": f"Bearer {self.gitlab_token}",
-        }
-        self.local_headers = {
-            "X-GitLab-Token": "tcnl-project",
-            "Content-Type": "application/json"
-        }
-        self.qoca_headers = {
-            "Content-Type": "application/json"
-        }
-        self.exp_textreading_name = os.getenv("EXPERIMENT_TEXTREADING_NAME")
-        self.platform_features = util.init_platform_features
-        self.missing_marker = -999
 
 class SubjectReprocessRequest(BaseModel):
     subject_id: str
     csv_filename: str 
 
 def process_text_reading(subject_id: str, csv_filename: str, config, logger) -> dict:
+    text_reading_processor = TextReadingProcessor(
+        data_dir=os.path.join(config.data_dir, config.exp_textreading_name)
+    )
     result = {
         "status": "error",
         "message": "",
@@ -75,38 +56,41 @@ def process_text_reading(subject_id: str, csv_filename: str, config, logger) -> 
 
                 csv_files = []
                 for audio_file in audio_files:
-                    logger.info(f"Processing audio file: {audio_file}")
+                    logger.info(f"\nProcessing audio file: {audio_file}")
                     try:
-                        csv_file = TextReadingProcessor().generate_csv(audio_file)
+                        csv_file = text_reading_processor.generate_csv(audio_file)
                         if csv_file:
                             csv_files.append(csv_file)
                     except Exception as e:
-                        logger.error(f"Error processing audio file {audio_file}: {str(e)}")
+                        logger.error(f"\nError processing audio file {audio_file}: {str(e)}")
 
                 if csv_files:
                     try:
-                        mean_speech_rate = TextReadingProcessor().calculate_mean_syllable_speech_rate(csv_files)
+                        mean_speech_rate = text_reading_processor.calculate_mean_syllable_speech_rate(csv_files)
 
                         if mean_speech_rate is None:
                             result["message"] = "Failed to calculate mean speech rate. "
                         elif pd.isna(mean_speech_rate) or mean_speech_rate == float('inf'):
                             mean_speech_rate = config.missing_marker
                         else:
-                            logger.info(f"Mean speech rate for subject {subject_id}: {mean_speech_rate}")
+                            logger.info(f"\nMean speech rate for subject {subject_id}: {mean_speech_rate}")
+                            result_df = pd.DataFrame({
+                                'ID': [subject_id],
+                                'LANGUAGE_READING_BEH_NULL_MeanSR': [mean_speech_rate]
+                            })
+                            update_json_result(subject_id, result_df, config, logger)
+                            logger.info(f"\nDone processing for subject {subject_id}!\n")
+                            
                             result.update({
                                 "status": "success",
                                 "message": "Successfully processed audio files and calculated mean speech rate.",
                                 "mean_speech_rate": mean_speech_rate,
                                 "success": True
                             })
-                            result_df = pd.DataFrame({
-                                'ID': [subject_id],
-                                'LANGUAGE_READING_BEH_NULL_MeanSR': [mean_speech_rate]
-                            })
-                            update_json_result(subject_id, result_df, config, logger)
                             
                     except Exception as e:
                         result["message"] = f"Error in calculating mean speech rate: {str(e)}"
+                
                 else:
                     result["message"] = f"No CSV files generated for subject {subject_id}"
                     return result
@@ -115,11 +99,15 @@ def process_text_reading(subject_id: str, csv_filename: str, config, logger) -> 
             result["message"] = f"Failed to read CSV file: {str(e)}"
             return result
 
+## ====================================================================================
+
+app = FastAPI(docs_url=None)
+
 @app.post("/process_textreading")
 async def reprocess_subject(request: SubjectReprocessRequest, token: str = Depends(authenticate_gitlab)):
     subject_id = request.subject_id
     csv_filename = request.csv_filename    
-    logger.info(f"Starting to process CSV file for subject ID: {subject_id} with filename: {csv_filename}")
+    logger.info(f"\nStarting to process CSV file for subject ID: {subject_id} with filename: {csv_filename}")
     result = process_text_reading(subject_id, csv_filename, config, logger)
     return result
 

@@ -125,12 +125,15 @@ app = Flask(__name__)
 
 @app.route('/predict', methods=['POST'])
 def predict():  
-    try:        
+    try:
+        config.brainage_prediction = True # initialize to True
+
         ## Receive request from server.py 
         data = request.get_json(force=True)
 
         if (not data) or ('age' not in data) or ('id_card' not in data) or ('name' not in data) or ('test_date' not in data):
-            return jsonify({"error": "Invalid input data"}), 400        
+            return jsonify({"error": "Invalid input data"}), 400
+        
         else:
             config.data.update(data)
             print("\nReceived input data at /predict:")
@@ -206,7 +209,7 @@ def predict():
 
                         ## Calculate the average score of the features
                         if missing_ratio.iloc[0] > config.missing_threshold:                             
-                            config.brainage_prediction = False                             
+                            config.brainage_prediction = False 
                             domain_score_list.append({
                                 "name": cog_domain,
                                 "score": -1
@@ -252,6 +255,7 @@ def predict():
                                 config, true_age, prediction
                             )
                     else:
+                        print("\nPrediction is not possible for this participant.")
                         prediction = -1
                         original_pad = -1
                         corrected_pad = -1

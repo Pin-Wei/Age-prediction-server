@@ -25,7 +25,7 @@ class Config:
         self.fetch_file_url = "https://gitlab.pavlovia.org/api/v4/projects/{}/repository/files/data%2F{}/raw?ref=master"
         self.gitlab_token = os.getenv("GITLAB_TOKEN")
         self.gitlab_headers = {
-            "Authorization": f"Bearer {self.gitlab_token}",
+            "Authorization": f"Bearer {self.gitlab_token}"
         }
         self.local_headers = {
             "X-GitLab-Token": "tcnl-project",
@@ -67,8 +67,9 @@ def fetch_file(project_name, project_id, filename, config, logger):
             logger.info(f"Successfully fetched file from project {project_name}.")
             return file_path
     else:
-        logger.error(f"Failed to fetch file from project {project_name}. Status code: {response.status_code}")
-        return None
+        print(f"{resp.text}")
+        logger.error(f"Failed to fetch file {filename} from project {project_name}.")
+        raise HTTPException(status_code=404, detail=f"File {filename} not found in project {project_name}.")
 
 def convert_np_types(obj):
     if isinstance(obj, (np.integer, np.int64)):
@@ -94,8 +95,9 @@ def update_json_result(subject_id, result_df, config, logger):
         with open(json_file_path, 'r') as json_file:
             existing_data = json.load(json_file)
     else:
-        existing_data = { feature: config.missing_marker for feature in config.platform_features }
-
+        existing_data = { 
+            feature: config.missing_marker for feature in config.platform_features 
+        }
     result_df = result_df.replace([pd.NA, pd.NaT, float('inf'), float('-inf')], config.missing_marker)
     result_df = result_df.fillna(config.missing_marker)
     formatted_result = process_and_format_result(
@@ -139,28 +141,27 @@ def predict(id_card, config, logger):
     if res.status_code == 200:
         user_info = res.json()
         logger.info("Successfully retrieved user info")
-    else:
-        logger.info("Failed to retrieve user info")
 
-    now = datetime.now(timezone.utc)
-    res = requests.post(
-        url=config.predict_url, 
-        headers=config.local_headers, 
-        json={
-            "age": user_info['age'],
-            "id_card": id_card,
-            "name": user_info['name'],
-            "test_date": now.strftime('%Y-%m-%dT%H%M%S.') + f"{int(now.microsecond / 1000):03d}Z"
-        }
-    )
-    if (res.status_code == 200):        
-        logger.info("Successfully retrieved prediction result")
-        return res.json()
+        now = datetime.now(timezone.utc)
+        res = requests.post(
+            url=config.predict_url, 
+            headers=config.local_headers, 
+            json={
+                "age": user_info['age'],
+                "id_card": id_card,
+                "name": user_info['name'],
+                "test_date": now.strftime('%Y-%m-%dT%H%M%S.') + f"{int(now.microsecond / 1000):03d}Z"
+            }
+        )
+        if (res.status_code == 200):        
+            logger.info("Successfully retrieved prediction result")
+            return res.json()
+        else:
+            logger.info("Failed to retrieve prediction result")
+            raise Exception(f"{res.text}: {res.status_code}")
     else:
-        logger.info("Failed to retrieve prediction result")
-        return None
-
-from datetime import datetime
+        logger.error("Failed to retrieve user info")
+        raise Exception(f"{res.text}: {res.status_code}")
 
 def parse_iso_date(s: str) -> str:
     formats = [
@@ -188,8 +189,8 @@ def upload_exam(exam, config, logger):
         logger.info(f"Successfully uploaded predict_result (exam_id={exam_id})")
         return exam_id
     else:
-        logger.info("Failed to upload predict_result")
-        return None
+        logger.error("Failed to upload predict_result")
+        raise Exception(f"{res.text}: {res.status_code}")
 
 def create_task(exam_id, csv_filename, config, logger):
     res = requests.post(
@@ -203,7 +204,8 @@ def create_task(exam_id, csv_filename, config, logger):
     if (res.status_code == 201):
         logger.info(f"Successfully created report-generating task (exam_id={exam_id})")
     else:
-        logger.info(f"Failed to create task report-generating task (exam_id={exam_id})")
+        logger.error(f"Failed to create task report-generating task (exam_id={exam_id})")
+        raise Exception(f"{res.text}: {res.status_code}")
 
 ## ====================================================================================
 
@@ -247,6 +249,7 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
 
             return {"status": "ok", "fetched_file": filename}        
         else:
+            logger.error(f"No valid commit found in the webhook payload")
             raise HTTPException(status_code=404, detail="No valid commit found!")
 
 @app.post('/report')
