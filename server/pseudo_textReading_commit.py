@@ -32,7 +32,7 @@ if __name__ == "__main__":
         raise ValueError("Please provide the subject ID as a command line argument.")
     else:
         subj = sys.argv[1]
-        csv_filepath = glob.glob(os.path.join(config.data_dir, f"{subj}_*.csv"))[0]
+        csv_filepath = glob.glob(os.path.join(config.data_dir, f"{subj}_*Z.csv"))[0]
         csv_filename = os.path.basename(csv_filepath)
         print(f"csv_filename: {csv_filename}")
 
@@ -47,7 +47,8 @@ if __name__ == "__main__":
                 "commits": [{
                     "title": f"data: {csv_filename}", 
                     "author": {"name":"Pavlovia Committer"}, 
-                    "added": [f"data/{csv_filename}"]
+                    "added": [f"data/{csv_filename}"], 
+                    "note": "a fake commit"
                 }]        
             }
         )

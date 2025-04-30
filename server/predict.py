@@ -321,6 +321,18 @@ def process_textreading_proxy():
         print("\nUnexpected error while forwarding internal request to process_textreading: ", str(e))
         return jsonify({"error": str(e)}), 500
 
+@app.errorhandler(400)
+def bad_request(e):
+    if request.data and request.data[:1] == b'\x16': # looks like a TLS/SSL handshake
+        msg = (
+            "It appears you are trying to connect using HTTPS to an HTTP-only endpoint. "
+            "Please connect using HTTP instead."
+        )
+        return jsonify({"error": msg}), 400
+    else:
+        return jsonify({"error": str(e)}), 400
+
+
 if __name__ == "__main__":
     print("Starting Flask server...")
     app.run(host='0.0.0.0', port=8888)

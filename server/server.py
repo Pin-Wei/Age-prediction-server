@@ -235,7 +235,15 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
             filename = os.path.basename(commit["added"][0])
             logger.info(f"Receiving file: {filename} from project {project_name} ({project_id})")
             
-            filepath = fetch_file(project_name, project_id, filename, config, logger)    
+            try:
+                if commit["note"] == "a fake commit":
+                    filepath = os.path.join(config.data_dir, project_name, filename)
+                    print("This commit is send from 'pseudo_textReading_commit.py'")
+                else:
+                    raise KeyError
+            except KeyError:
+                filepath = fetch_file(project_name, project_id, filename, config, logger)    
+            
             process_file(project_name, filepath, config, logger)
 
             if project_name == config.exp_textreading_name:
