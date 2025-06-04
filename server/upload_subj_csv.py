@@ -1,28 +1,68 @@
 #!/usr/bin/python
 
 import os
+import sys
+import chardet
 import requests
 
-AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJueWN1LWFkbWluIiwiZXhwIjoxNzMyNjEzMzU1fQ.tVqszWu0DaklRxdWgQfktBJtrBX0afZu3DSId9G3gTA"
+from dotenv import load_dotenv
+load_dotenv()
 
-def upload_file(csv_file_path):
+qoca_token = os.getenv("QOCA_TOKEN")
+qoca_headers = {
+    "Authorization": f"Bearer {qoca_token}"
+}
 
-    if not os.path.exists(csv_file_path):
-        print(f"File {csv_file_path} does not exist :(")
-        return None
+def detect_and_convert_to_utf8(input_path):
+    with open(input_path, "rb") as f:
+        raw_data = f.read()
+    result = chardet.detect(raw_data)
+    encoding = result["encoding"]
+
+    if encoding is None:
+        raise ValueError("Could not detect encoding")
+
+    if encoding.lower() == "utf-8":
+        print("File is already in UTF-8 encoding.")
+        return input_path
     else:
-        url='https://qoca-api.chih-he.dev/uploadfile'
-        headers={
-            "Authorization": AUTH_TOKEN
-        }
-        csv_file = open(csv_file_path, 'rb')
-        print(f"Uploading file: '{csv_file_path}'")
-        result = requests.post(url=url, headers=headers, files={'file': csv_file})
-        csv_file.close()
+        print(f"Detected encoding: {encoding}. Converting to UTF-8...")
+        output_path = os.path.splitext(input_path)[0] + "_utf8.csv"
+        content = raw_data.decode(encoding, errors="ignore")
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return output_path
+
+def upload_file(file_path):
+
+    if not os.path.exists(file_path):
+        raise ValueError(f"File {file_path} does not exist :(")
     
-    if result.status_code == 200:
+    else:
+        print(f"Uploading file: '{file_path}'")
+        ext = os.path.splitext(file_path)[1].lower()
+
+        if ext != ".csv":
+            raise ValueError(f"Unsupported file type: {ext}")
+            
+        with open(file_path, 'rb') as f:
+            res = requests.post(
+                url='https://qoca-api.chih-he.dev/uploadfile', 
+                headers=qoca_headers, 
+                files={'file': f},
+            )
+    
+    if res.status_code == 200:
         print("Successfully uploaded file :)")
+    else:
+        print("Failed to upload file :(")
+        raise ValueError(f"Failed to upload file: {res.status_code}")
 
 if __name__ == "__main__":
-    csv_file_path = os.path.join("chih-he_uploadfile.csv")
-    upload_file(csv_file_path)
+    if len(sys.argv) > 1:
+        raw_input_path = sys.argv[1]
+    else:
+        raw_input_path = os.path.join("chih-he_uploadfile.csv") # default 
+
+    file_path = detect_and_convert_to_utf8(raw_input_path)    
+    upload_file(file_path)

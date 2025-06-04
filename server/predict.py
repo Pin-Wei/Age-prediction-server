@@ -3,6 +3,7 @@
 
 from flask import Flask, request, jsonify
 import requests
+
 import os
 import joblib
 import numpy as np
@@ -10,10 +11,13 @@ import pandas as pd
 from dotenv import load_dotenv
 import util
 
+import logging
+logging.basicConfig(level=logging.INFO)
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
 import warnings
 from sklearn.exceptions import InconsistentVersionWarning
 warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
-pd.set_option('future.no_silent_downcasting', True)
 
 class Config:
     def __init__(self):
@@ -323,15 +327,30 @@ def process_textreading_proxy():
 
 @app.errorhandler(400)
 def bad_request(e):
-    if request.data and request.data[:1] == b'\x16': # looks like a TLS/SSL handshake
-        msg = (
-            "It appears you are trying to connect using HTTPS to an HTTP-only endpoint. "
-            "Please connect using HTTP instead."
-        )
-        return jsonify({"error": msg}), 400
-    else:
-        return jsonify({"error": str(e)}), 400
+    raw_data = request.get_data(as_text=False)
 
+    if raw_data[:1] == b'\x16': # looks like a TLS/SSL handshake
+        msg = f"HTTPS-like request to HTTP server from {request.remote_addr}"
+        app.logger.warning(msg)
+        return jsonify({"error": "Use HTTP instead of HTTPS."}), 400
+    
+    elif raw_data[:1] == b'\x00':
+        msg = f"Invalid HTTP/0.9 request from {request.remote_addr}"
+        app.logger.warning(msg)
+        return jsonify({"error": "Bad HTTP version."}), 400
+    
+    else:
+        msg = f"Bad Request from {request.remote_addr} using {request.method}"
+        app.logger.warning(msg)
+        return jsonify({"error": "Malformed request."}), 400
+
+@app.errorhandler(404)
+def not_found(e):
+    msg = (
+        f"Not found: {request.path} from {request.remote_addr}"
+    )
+    app.logger.warning(msg)
+    return jsonify({"error": f"Path {request.path} not found."}), 404
 
 if __name__ == "__main__":
     print("Starting Flask server...")

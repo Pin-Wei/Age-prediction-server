@@ -131,6 +131,8 @@ def process_file(project_name, filepath, config, logger):
     if result_df is not None:
         logger.info(f"Successfully processed data from {project_name}")
         update_json_result(subject_id, result_df, config, logger)
+    elif project_name == config.exp_textreading_name:
+        logger.info(f"No results for TextReading")
     else:
         logger.warning(f"No results found for {project_name}")
 
