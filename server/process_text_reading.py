@@ -14,7 +14,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 import util
-from server import *
+from server import Config, authenticate_gitlab, convert_np_types, update_json_result
 from data_processors.textreading_processor import TextReadingProcessor
 
 class SubjectReprocessRequest(BaseModel):

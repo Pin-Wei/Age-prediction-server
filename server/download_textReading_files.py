@@ -97,7 +97,7 @@ if __name__ == "__main__":
         not_downloaded_tokens, config, logger
     )
 
-    marked_ready_csv_filenames = []
+    csv_ready_marked_subjs = []
     if len(urls_to_download) > 0:
         for file_url in urls_to_download:
             res = requests.get(file_url, stream=True)
@@ -111,12 +111,12 @@ if __name__ == "__main__":
                 logger.info(f"Downloaded: {file_url}")
 
                 subj = file_name.split("_")[0]
-                if subj not in marked_ready_csv_filenames:
+                if subj not in csv_ready_marked_subjs:
                     csv_filename = not_ready_csv_filenames[subj]
                     update_is_file_ready(
                         csv_filename, 1, logger
                     ) 
-                    marked_ready_csv_filenames.append(csv_filename)
+                    csv_ready_marked_subjs.append(subj)
             else:
                 logger.info("Failed to download. Status code:", res.status_code)
     # else:

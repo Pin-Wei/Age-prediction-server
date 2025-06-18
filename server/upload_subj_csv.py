@@ -62,7 +62,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         raw_input_path = sys.argv[1]
     else:
-        raw_input_path = os.path.join("subj_csv_files", "test_and_NHRI_2025-06-06.csv")
+        raw_input_path = os.path.join("subj_csv_files", "test_and_NHRI_2025-06-18.csv")
 
     file_path = detect_and_convert_to_utf8(raw_input_path)    
     upload_file(file_path)

@@ -192,16 +192,19 @@ def predict():
                     DF = pd.DataFrame(index=range(1), columns=scaler.feature_names_in_)
                     DF.update(pd.DataFrame([config.data["features"]])) 
 
-                    ## Before scaling, replace missing values with 0
+                    ## Identify the positions of custom missing marker (-999; to ignore fields not listed in the json file)
                     data_is_missing = DF == config.missing_marker
+
+                    ## Replace missing values with 0 before scaling
+                    DF = DF.astype(float) 
                     DF = DF.replace(config.missing_marker, np.nan)
                     DF = DF.fillna(0)
 
-                    ## Apply stored MinMaxScaler(), which scales the dataset between 0 and 1
+                    ## Apply stored MinMaxScaler() to scales the dataset between 0 and 1
                     DF_scaled = pd.DataFrame(scaler.transform(DF), columns=scaler.feature_names_in_)
 
-                    ## Fill missing values (that has a field in the JSON data and were used to train the model) 
-                    DF_scaled[data_is_missing] = config.replace_missing_with                    
+                    ## Fill missing entries with a specified value (0.5)
+                    DF_scaled[data_is_missing] = config.replace_missing_with
 
                     ## Calculate the average scores for each cognitive domain
                     domain_score_list = []
@@ -245,7 +248,7 @@ def predict():
 
                     ## Predict brain-age
                     if config.brainage_prediction:
-                        print("\nPredicting brain age...")
+                        print("\nPredicting brain age ...")
                         prediction = float(model.predict(DF_scaled[platform_features])[0])
                         original_pad = prediction - true_age
 
@@ -280,8 +283,8 @@ def predict():
                             "totalParticipants": config.metadata
                         }
                     }
-                    print(f"腦齡預測結果: {response['results']['brainAge']}\n")
-                    # print(response)
+                    print(f"腦齡預測結果: {response['results']['brainAge']}")
+                    print("‧★,:*:‧\(^o^)/‧:*‧°★*\n")
 
                     return jsonify(response), 200
         
@@ -313,11 +316,11 @@ def process_textreading_proxy():
             )      
             if resp.status_code == 200:
                 return jsonify({
-                        "message": "Successfully forward internal request to process_textreading"
+                        "message": "\nSuccessfully forward internal request to process_textreading"
                     }), 200
             else:
                 return jsonify({
-                        "error": f"Failed to forward internal process_textreading request", 
+                        "error": f"\nFailed to forward internal process_textreading request", 
                         "details": resp.text
                     }), resp.status_code
         
