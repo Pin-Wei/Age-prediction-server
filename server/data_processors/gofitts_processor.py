@@ -12,8 +12,8 @@ class GoFittsProcessor:
         self.id_column = "指定代號"
         self.half_width = 960
         self.half_height = 540
-        self.modified_jar_path = os.path.join("GoFitts_modified.jar")  
-
+        self.modified_jar_path = "/home/tcnl/YHL/Pavloviadata/server/data_processors/GoFitts_modified.jar"
+    
     def convert_file(self):
         df = pd.read_csv(self.file_path)
 
