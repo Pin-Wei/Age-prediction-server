@@ -87,7 +87,7 @@ if __name__ == "__main__":
     not_downloaded_tokens = []
     not_ready_csv_filenames = {}
     for subj in no_webm_subjs:
-        csv_filepath = glob.glob(os.path.join(config.data_dir, f"{subj}_*.csv"))[0]
+        csv_filepath = glob.glob(os.path.join(config.data_dir, f"{subj}_*Z.csv"))[0]
         df = pd.read_csv(csv_filepath)
         session_token = df["sessionToken"].values[0]
         not_downloaded_tokens.append(session_token)
