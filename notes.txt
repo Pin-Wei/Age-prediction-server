@@ -1,0 +1,10 @@
+The testing personnel of the NHRI occasionally omit the "s" from the subject ID when collecting the data.
+This file records subjects whose IDs were entered incorrectly. 
+
+2025-09-09 "0502s0005" --> "05020005".
+
+2025-12-15 "6511s0002-2" --> "65110002-2".
+
+2026-01-12 "6501s0001-1" --> "65010001-1".
+
+2026-04-01 "6404s0007-1" --> "64040007-1"  and "6416s0008-1" --> "64160008-1" 

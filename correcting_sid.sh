@@ -5,6 +5,7 @@
 # This script is for correcting and standardizing file names.
 
 APPLY=false
+echo ""
 
 while getopts ":y" opt; do
     case "$opt" in
@@ -29,6 +30,10 @@ if [ -z "$OLD" ] || [ -z "$NEW" ]; then
     exit 1
 fi
 
+if ! $APPLY; then 
+	echo "Planning to but not yet rename the following files: "
+fi
+
 find . -type f -name "*$OLD*" | while IFS= read -r file; do
     dir="$(dirname "$file")"
     base="$(basename "$file")"
@@ -40,3 +45,10 @@ find . -type f -name "*$OLD*" | while IFS= read -r file; do
         echo "$file -> $dir/$newbase"
     fi
 done
+
+if ! $APPLY; then 
+	echo ""
+	echo "If you wish to rename the files, please use: $0 [-y] OLD_PATTERN NEW_PATTERN"
+fi
+
+echo ""
