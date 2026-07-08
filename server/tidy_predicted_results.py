@@ -85,7 +85,7 @@ def get_prediction_results(subject_id, args, config, logger):
         test_date = _get_test_date(subject_id, config)
         data = predict(subject_id, config, logger, test_date)
     else:
-        fp = os.path.join("predicted_results", f"{subject_id}_predicted_results.json")
+        fp = os.path.join("predicted_results", f"{subject_id}_predicted_result.json")
         with open(fp, "r", encoding="utf-8") as f:
             data = json.load(f)
 

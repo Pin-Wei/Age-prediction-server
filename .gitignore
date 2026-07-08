@@ -1,11 +1,11 @@
 
 **/__pycache__/
 
-
 data/*
-logs/*
+logs/
 server/subj_csv_files/*
 server/predicted_results/*
 server/integrated_results/*
-server/ARCHIVED/*
+server/ARCHIVED/
 server/.env
+tmp/

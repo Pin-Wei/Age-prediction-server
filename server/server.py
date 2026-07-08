@@ -310,11 +310,10 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
 
 @app.post('/report')
 async def create_report(request: Request):
-    body = await request.json()
+    body = await request.json()    
     subject_id = body.get("subject_id")
-
     predict_result = predict(subject_id, config, logger)
-    # print(predict_result)
+    
     if predict_result:
         exam_id = upload_exam(predict_result, config, logger)
         return {"status": "ok", 'exam_id': exam_id}
