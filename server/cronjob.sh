@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-# Usage: bash cronjob.sh $1 [download_textreading_files | process_tasks | upload_to_dropbox]
+# Usage: bash cronjob.sh [enable | disable] [download_textreading_files | process_tasks | upload_to_dropbox]
 
 PYTHON="/home/aclexp/mambaforge/envs/server/bin/python"
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd );
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 LOG_DIR="$SCRIPT_DIR/../logs"
 CMD_DOWNLOAD_TEXTREADING_FILES="$PYTHON $SCRIPT_DIR/download_textreading_files.py >> $LOG_DIR/cronjob_download_textreading_files.log 2>&1"
 CMD_PROCESS_TASKS="$PYTHON $SCRIPT_DIR/process_tasks.py >> $LOG_DIR/cronjob_process_tasks.log 2>&1"

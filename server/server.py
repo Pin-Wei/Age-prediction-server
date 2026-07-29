@@ -16,6 +16,7 @@ import util
 from uvicorn_config import LOGGING_CONFIG
 from task_integrator import TaskIntegrator, process_and_format_result
 
+
 class Config:
     def __init__(self):
         self.setup_paths()
@@ -55,6 +56,7 @@ class Config:
         self.missing_marker = -999
         self.discord_role_id = int(os.getenv("DISCORD_ROLE_ID"))
 
+
 def setup_logger():
     logger = logging.getLogger(__name__)
     logger.handlers.clear()
@@ -69,15 +71,18 @@ def setup_logger():
     logger.addHandler(handler)
     return logger
 
+
 def authenticate_gitlab(x_gitlab_token: str = Header(...)):
     if x_gitlab_token != 'tcnl-project':
         raise HTTPException(status_code=403)
     return x_gitlab_token
 
+
 def send_msg_to_discord(msg, config, logger):
     res = requests.post(
         url=config.discord_webhook_url, 
-        json={"content": msg}
+        json={"content": msg}, 
+        timeout=30
     )
     if res.status_code == 204:
         logger.info(f"Successfully sent message to Discord")
@@ -85,6 +90,7 @@ def send_msg_to_discord(msg, config, logger):
     else:
         logger.error(f"Failed to send message to Discord")
         return {"status": "failed", "code": res.status_code}
+
 
 def fetch_file(project_name, project_id, filename, config, logger):
     project_dir = os.path.join(config.data_dir, project_name)
@@ -98,7 +104,8 @@ def fetch_file(project_name, project_id, filename, config, logger):
         logger.info(f"Fetching file {filename} from project {project_name}.")
         resp = requests.get(
             url=config.fetch_file_url.format(project_id, filename), 
-            headers=config.gitlab_headers
+            headers=config.gitlab_headers, 
+            timeout=60
         )
         if resp.status_code == 200:
             with open(file_path, "wb") as f:
@@ -109,6 +116,7 @@ def fetch_file(project_name, project_id, filename, config, logger):
             print(f"{resp.text}")
             logger.error(f"Failed to fetch file {filename} from project {project_name}.")
             raise HTTPException(status_code=404, detail=f"File {filename} not found in project {project_name}.")
+
 
 def convert_np_types(obj):
     if isinstance(obj, (np.integer, np.int64)):
@@ -125,6 +133,7 @@ def convert_np_types(obj):
         return { k: convert_np_types(v) for k, v in obj.items() } 
     else:
         return obj
+
 
 def update_json_result(subject_id, result_df, config, logger):
     json_file_path = os.path.join(
@@ -152,6 +161,7 @@ def update_json_result(subject_id, result_df, config, logger):
         json.dump(existing_data, f, indent=2, default=convert_np_types)
     logger.info(f"Successfully updated {json_file_path}")
 
+
 def process_file(project_name, filepath, config, logger): 
     subject_id = os.path.basename(filepath).split('_')[0]
     
@@ -175,9 +185,11 @@ def process_file(project_name, filepath, config, logger):
     else:
         logger.warning(f"No results found for {project_name}")
 
+
 def predict(id_card, config, logger, test_date=None):
     res = requests.get(
-        url=f"https://qoca-api.chih-he.dev/user/{id_card}"
+        url=f"https://qoca-api.chih-he.dev/user/{id_card}", 
+        timeout=30
     )
     if res.status_code == 200:
         user_info = res.json()
@@ -201,13 +213,14 @@ def predict(id_card, config, logger, test_date=None):
             logger.info("Successfully retrieved prediction result")
             return res.json()
         else:
-            logger.info("Failed to retrieve prediction result")
+            logger.error(f"Failed to retrieve prediction result. Status code: {res.status_code}")
             return None
             # raise Exception(f"{res.text}: {res.status_code}")
     else:
-        logger.error("Failed to retrieve user info")
+        logger.error(f"Failed to retrieve user info. Status code: {res.status_code}")
         return None
         # raise Exception(f"{res.text}: {res.status_code}")
+
 
 def parse_iso_date(s: str) -> str:
     formats = [
@@ -222,12 +235,14 @@ def parse_iso_date(s: str) -> str:
     # if none of the formats match, raise an error
     raise ValueError(f"Unknown date format: {s!r}")        
 
+
 def upload_exam(exam, config, logger):
     exam['testDate'] = parse_iso_date(exam['testDate'])
     res = requests.post(
         url='https://qoca-api.chih-he.dev/exams', 
         headers=config.qoca_headers, 
-        json=exam
+        json=exam, 
+        timeout=30
     )
     if (res.status_code == 201):
         json_data = res.json()
@@ -235,8 +250,9 @@ def upload_exam(exam, config, logger):
         logger.info(f"Successfully uploaded predict_result (exam_id={exam_id})")
         return exam_id
     else:
-        logger.error("Failed to upload predict_result")
-        raise Exception(f"{res.text}: {res.status_code}")
+        logger.error(f"Failed to upload predict_result. Status code: {res.status_code}")
+        return None
+
 
 def create_task(exam_id, csv_filename, config, logger):
     res = requests.post(
@@ -245,13 +261,14 @@ def create_task(exam_id, csv_filename, config, logger):
         json={
             'exam_id': exam_id, 
             'csv_filename': csv_filename
-        }
+        }, 
+        timeout=30
     )
     if (res.status_code == 201):
         logger.info(f"Successfully created report-generating task (exam_id={exam_id})")
     else:
-        logger.error(f"Failed to create task report-generating task (exam_id={exam_id})")
-        raise Exception(f"{res.text}: {res.status_code}")
+        logger.error(f"Failed to create report-generating task (exam_id={exam_id}). Status code: {res.status_code}")
+
 
 ## ====================================================================================
 
@@ -260,10 +277,12 @@ config = Config()
 logger = setup_logger()  
 app = FastAPI(docs_url=None)
 
+
 @app.get("/")
 def read_root():
     logger.info("Hello World")
     return {"status": "ok"}
+
 
 @app.post("/webhook")
 async def receive_webhook(request: Request, background_tasks: BackgroundTasks, token: str = Depends(authenticate_gitlab)):
@@ -308,6 +327,7 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks, t
 
             return {"status": "ok", "fetched_file": filename}
 
+
 @app.post('/report')
 async def create_report(request: Request):
     body = await request.json()    
@@ -318,7 +338,9 @@ async def create_report(request: Request):
         exam_id = upload_exam(predict_result, config, logger)
         return {"status": "ok", 'exam_id': exam_id}
     else:
+        logger.error("Failed to produce predict_result")
         raise HTTPException(status_code=422, detail="Failed to produce predict_result")
+
 
 if __name__ == "__main__":  
     uvicorn.run(app, host="0.0.0.0", port=8000, log_config=LOGGING_CONFIG)
